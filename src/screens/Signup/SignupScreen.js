@@ -1,38 +1,63 @@
-import React from 'react';
-import { View, Text, TextInput, TouchableOpacity, Image } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, Image, Alert } from 'react-native';
+import { registerUser } from '../../servers/AuthenticationService'; // Import AuthenticationService
 import styles from './styles';
 
 export default function SignupScreen({ navigation }) {
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+
+  const handleSignup = async () => {
+    try {
+      const response = await registerUser(fullName, email, password, phoneNumber); // Sử dụng phương thức registerUser từ AuthenticationService
+      if (response.message === 'Registration successful. OTP has been sent to your email.') {
+        // Chuyển sang trang xác thực và truyền email
+        navigation.navigate('VerifyAccount', { email });
+      }
+    } catch (error) {
+      console.error(error);
+      Alert.alert('Lỗi', 'Đã có lỗi xảy ra khi đăng ký. Vui lòng thử lại.');
+    }
+  };
+
   return (
     <View style={styles.container}>
       <Image style={styles.image} source={require('../../../assets/images/logo.jpg')} />
-      <View style={styles.backgroundShapes}>
-        <View style={styles.shape2}></View>
-        
-      </View>
-
       <Text style={styles.title}>Tạo tài khoản</Text>
 
-      <View style={styles.inputContainer}>
-        <TextInput 
-          style={styles.input}
-          placeholder="Email"
-          placeholderTextColor="#D2D2D2"
-        />
-        <TextInput 
-          style={styles.input}
-          placeholder="Mật khẩu"
-          placeholderTextColor="#D2D2D2"
-          secureTextEntry
-        />
-        <TextInput 
-          style={styles.phoneInput}
-          placeholder="Số điện thoại"
-          placeholderTextColor="#D2D2D2"
-        />
-      </View>
+      <TextInput
+        style={styles.input}
+        placeholder="Name"
+        placeholderTextColor="#D2D2D2"
+        value={fullName}
+        onChangeText={setFullName}
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="Email"
+        placeholderTextColor="#D2D2D2"
+        value={email}
+        onChangeText={setEmail}
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="Mật khẩu"
+        placeholderTextColor="#D2D2D2"
+        secureTextEntry
+        value={password}
+        onChangeText={setPassword}
+      />
+      <TextInput
+        style={styles.phoneInput}
+        placeholder="Số điện thoại"
+        placeholderTextColor="#D2D2D2"
+        value={phoneNumber}
+        onChangeText={setPhoneNumber}
+      />
 
-      <TouchableOpacity style={styles.signupButton}>
+      <TouchableOpacity style={styles.signupButton} onPress={handleSignup}>
         <Text style={styles.signupButtonText}>Đăng Ký</Text>
       </TouchableOpacity>
 
