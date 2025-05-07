@@ -1,10 +1,24 @@
-import axios from 'axios';
+import { api, handleApiError } from "./connection";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_URL = 'http://192.168.0.108:5188/api/auth';
+// Hàm đăng nhập
+export const loginUser = async (email, password) => {
+  try {
+    const response = await api.post('/Auth/login', { email, password });
+    const { token } = response.data;
+    await AsyncStorage.setItem('token', token);
+   
+    return response.data;
+  } catch (error) {
+    handleApiError(error, 'Đăng nhập thất bại');
+    return null;
+  }
+};
 
+// Hàm đăng ký
 export const registerUser = async (fullName, email, password, phoneNumber) => {
   try {
-    const response = await axios.post(`${API_URL}/register`, {
+    const response = await api.post('/Auth/register', {
       fullName,
       email,
       password,
@@ -12,20 +26,18 @@ export const registerUser = async (fullName, email, password, phoneNumber) => {
     });
     return response.data;
   } catch (error) {
-    console.error("Error registering user:", error);
-    throw error;
+    handleApiError(error, 'Đăng ký thất bại');
+    return null;
   }
 };
 
+// Xác minh OTP
 export const verifyOtp = async (email, otp) => {
   try {
-    const response = await axios.post(`${API_URL}/verify-otp`, {
-      email,
-      otp,
-    });
+    const response = await api.post('/Auth/verify-otp', { email, otp });
     return response.data;
   } catch (error) {
-    console.error("Error verifying OTP:", error);
-    throw error;
+    handleApiError(error, 'Xác minh OTP thất bại');
+    return null;
   }
 };
