@@ -1,9 +1,12 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Image, TextInput, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { get } from 'react-native/Libraries/TurboModule/TurboModuleRegistry';
+import { GetCategories } from '../servers/ProductService';
 
 export default function HomeScreen({ navigation }) {
+    const [categories, setCategories] = useState([]);
 
   useEffect(() => {
     const checkLoginStatus = async () => {
@@ -21,6 +24,25 @@ export default function HomeScreen({ navigation }) {
     };
 
     checkLoginStatus();
+  }, []);
+
+   // Load danh mục
+   useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const res = await GetCategories();
+        if (res && Array.isArray(res)) {
+          setCategories(res);
+        } else {
+          Alert.alert('Lỗi', 'Không thể tải danh mục sản phẩm');
+        }
+      } catch (error) {
+        Alert.alert('Lỗi', 'Đã xảy ra lỗi khi tải danh mục');
+        console.log('Load category error:', error);
+      }
+    };
+
+    loadCategories();
   }, []);
   return (
     <ScrollView style={styles.container}>
@@ -44,8 +66,8 @@ export default function HomeScreen({ navigation }) {
         />
       </View>
 
-      {/* Danh Mục */}
-      <View style={styles.section}>
+           {/* Danh Mục */}
+           <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Danh Mục</Text>
           <TouchableOpacity>
@@ -53,18 +75,16 @@ export default function HomeScreen({ navigation }) {
           </TouchableOpacity>
         </View>
 
-        <View style={styles.categories}>
-          {["Quần Áo", "Giày Dép", "Túi Xách", "Đồng Hồ"].map((name, index) => (
-            <View key={index} style={styles.categoryItem}>
-              <Image
-                source={require('../../assets/images/banner.webp')} // Đổi ảnh
-                style={styles.categoryImage}
-              />
-              <Text style={styles.categoryText}>{name}</Text>
-            </View>
-          ))}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+    <View style={styles.categories}>
+      {categories.map((cat, index) => (
+        <View key={index} style={styles.categoryItem}>
+          <Text style={styles.categoryText}>{cat.name}</Text>
         </View>
-      </View>
+      ))}
+    </View>
+  </ScrollView>
+        </View>
 
       {/* Mới Nhất */}
       <View style={styles.section}>
@@ -138,21 +158,21 @@ const styles = StyleSheet.create({
       flexWrap: 'wrap',
       justifyContent: 'space-between',
     },
-    categoryItem: {
-      width: '23%',
-      alignItems: 'center',
-      marginBottom: 15,
-    },
-    categoryImage: {
-      width: 60,
-      height: 60,
-      borderRadius: 12,
-      backgroundColor: '#eee',
-      marginBottom: 5,
-    },
-    categoryText: {
-      fontSize: 12,
-    },
+   categoryItem: {
+  backgroundColor: '#f0f0f0',
+  paddingVertical: 10,
+  paddingHorizontal: 16,
+  borderRadius: 20,
+  marginRight: 10,
+  marginBottom: 10,
+},
+
+categoryText: {
+  fontSize: 14,
+  fontWeight: '500',
+  color: '#333',
+},
+
     productCard: {
       width: 120,
       marginRight: 16,

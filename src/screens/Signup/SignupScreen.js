@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Image, Alert } from 'react-native';
 import { registerUser } from '../../servers/AuthenticationService'; // Import AuthenticationService
 import styles from './styles';
+import KeyboardWrapper from '../../components/KeyboardWrapper';
 
 export default function SignupScreen({ navigation }) {
   const [fullName, setFullName] = useState('');
@@ -18,6 +19,7 @@ export default function SignupScreen({ navigation }) {
   };
 
   return (
+    <KeyboardWrapper>
     <View style={styles.container}>
       <Image style={styles.image} source={require('../../../assets/images/logo.jpg')} />
       <Text style={styles.title}>Tạo tài khoản</Text>
@@ -62,5 +64,6 @@ export default function SignupScreen({ navigation }) {
         </Text>
       </TouchableOpacity>
     </View>
+    </KeyboardWrapper>
   );
 }

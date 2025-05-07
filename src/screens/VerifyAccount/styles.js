@@ -67,7 +67,7 @@ const styles = StyleSheet.create({
     lineHeight: 27,
   },
   email: {
-    left: 103,
+    left: 50,
     top: 371,
     position: 'absolute',
     textAlign: 'center',

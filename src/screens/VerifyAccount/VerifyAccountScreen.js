@@ -10,7 +10,7 @@ export default function VerifyAccountScreen({ route, navigation }) {
   const handleVerify = async () => {
     try {
       const response = await verifyOtp(email, otp);  // Sử dụng phương thức verifyOtp từ AuthenticationService
-      if (response.message === 'Email verified successfully.') {
+      if (response) {
         // Quay lại trang đăng nhập
         Alert.alert('Thành công', 'Tài khoản của bạn đã được xác thực.', [
           {

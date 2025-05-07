@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, Alert } from 'react-native';
 import styles from './styles';
 import { loginUser } from '../../servers/AuthenticationService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import KeyboardWrapper from '../../components/KeyboardWrapper';
 
 export default function LoginScreen({ navigation }) {
   // Tạo state cho email và password
@@ -20,6 +21,7 @@ export default function LoginScreen({ navigation }) {
   };
   
   return (
+    <KeyboardWrapper>
     <View style={styles.container}>
       <View style={styles.backgroundShapes}>
         <View style={styles.shape1}></View>
@@ -70,5 +72,6 @@ export default function LoginScreen({ navigation }) {
         </TouchableOpacity>
       </View>
     </View>
+    </KeyboardWrapper>
   );
 }
