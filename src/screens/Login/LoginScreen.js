@@ -1,8 +1,24 @@
-import React from 'react';
-import { View, Text, TextInput, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, Alert } from 'react-native';
 import styles from './styles';
+import { loginUser } from '../../servers/AuthenticationService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function LoginScreen({ navigation }) {
+  // Tạo state cho email và password
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  // Xử lý đăng nhập
+  const handleLogin = async () => {
+    const res = await loginUser(email, password);
+    if (res) {
+      console.log('data:', res);
+      await AsyncStorage.setItem('user', JSON.stringify(res.user)); // lưu user
+      navigation.replace('Main'); // chuyển tới MainTabs
+    }
+  };
+  
   return (
     <View style={styles.container}>
       <View style={styles.backgroundShapes}>
@@ -18,6 +34,8 @@ export default function LoginScreen({ navigation }) {
         style={styles.input}
         placeholder="Email"
         placeholderTextColor="#D2D2D2"
+        value={email} // Liên kết với state email
+        onChangeText={setEmail} // Cập nhật giá trị của email
       />
 
       <TextInput 
@@ -25,13 +43,15 @@ export default function LoginScreen({ navigation }) {
         placeholder="Mật khẩu"
         placeholderTextColor="#D2D2D2"
         secureTextEntry={true}
+        value={password}
+        onChangeText={setPassword}
       />
 
       <TouchableOpacity style={styles.forgotPassword} onPress={() => navigation.navigate('ForgotPassword')}>
         <Text style={styles.forgotPasswordText}>Quên mật khẩu?</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.loginButton}>
+      <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
         <Text style={styles.loginButtonText}>Đăng Nhập</Text>
       </TouchableOpacity>
 

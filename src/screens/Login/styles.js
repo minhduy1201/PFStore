@@ -6,6 +6,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     padding: 20,
     position: 'relative',
+    paddingBottom:30
   },
   backgroundShapes: {
     position: 'absolute',

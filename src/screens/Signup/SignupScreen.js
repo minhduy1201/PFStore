@@ -10,16 +10,11 @@ export default function SignupScreen({ navigation }) {
   const [phoneNumber, setPhoneNumber] = useState('');
 
   const handleSignup = async () => {
-    try {
       const response = await registerUser(fullName, email, password, phoneNumber); // Sử dụng phương thức registerUser từ AuthenticationService
-      if (response.message === 'Registration successful. OTP has been sent to your email.') {
+      if (response) {
         // Chuyển sang trang xác thực và truyền email
         navigation.navigate('VerifyAccount', { email });
       }
-    } catch (error) {
-      console.error(error);
-      Alert.alert('Lỗi', 'Đã có lỗi xảy ra khi đăng ký. Vui lòng thử lại.');
-    }
   };
 
   return (
