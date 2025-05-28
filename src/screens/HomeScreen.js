@@ -35,23 +35,23 @@ export default function HomeScreen({ navigation }) {
     checkLoginStatus();
   }, []);
 
-  // Load danh mục
-  useEffect(() => {
-    const loadCategories = async () => {
-      try {
-        const res = await GetCategories();
-        if (res && Array.isArray(res)) {
-          setCategories(res);
-        } else {
-          Alert.alert("Lỗi", "Không thể tải danh mục sản phẩm");
-        }
-      } catch (error) {
-        Alert.alert("Lỗi", "Đã xảy ra lỗi khi tải danh mục");
-        console.log("Load category error:", error);
-      }
-    };
-    loadCategories();
-  }, []);
+  // // Load danh mục
+  // useEffect(() => {
+  //   const loadCategories = async () => {
+  //     try {
+  //       const res = await GetCategories();
+  //       if (res && Array.isArray(res)) {
+  //         setCategories(res);
+  //       } else {
+  //         Alert.alert("Lỗi", "Không thể tải danh mục sản phẩm");
+  //       }
+  //     } catch (error) {
+  //       Alert.alert("Lỗi", "Đã xảy ra lỗi khi tải danh mục");
+  //       console.log("Load category error:", error);
+  //     }
+  //   };
+  //   loadCategories();
+  // }, []);
   return (
     <ScrollView style={styles.container}>
       {/* Thanh tìm kiếm */}
@@ -96,7 +96,7 @@ export default function HomeScreen({ navigation }) {
       {/* Mới Nhất */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Mới Nhất</Text>
+          <Text style={styles.sectionTitle}>Sản phẩm</Text>
           <TouchableOpacity>
             <Ionicons name="chevron-forward" size={20} />
           </TouchableOpacity>
@@ -104,14 +104,18 @@ export default function HomeScreen({ navigation }) {
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           {[1, 2, 3].map((_, index) => (
-            <View key={index} style={styles.productCard}>
+            <TouchableOpacity
+              key={index}
+              style={styles.productCard}
+              onPress={() => navigation.navigate("ProductDetail")}
+            >
               <Image
                 source={require("../../assets/images/demo.jpg")} // Đổi ảnh
                 style={styles.productImage}
               />
               <Text style={styles.productTitle}>Sản phẩm {index + 1}</Text>
               <Text style={styles.productPrice}>160.000đ</Text>
-            </View>
+            </TouchableOpacity>
           ))}
         </ScrollView>
       </View>
