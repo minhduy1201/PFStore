@@ -106,42 +106,6 @@ const ProductDetail = ({ route }) => {
           },
         ],
       },
-      {
-        id: 5,
-        userName: "Khánh",
-        userAvatar: "https://via.placeholder.com/40x40/f0f0f0/333333?text=K",
-        content: "Giá fix thêm được không?",
-        replies: [],
-      },
-      {
-        id: 6,
-        userName: "Tâm",
-        userAvatar: "https://via.placeholder.com/40x40/f0f0f0/333333?text=T",
-        content: "Có size nhỏ hơn không?",
-        replies: [],
-      },
-      {
-        id: 7,
-        userName: "Huy",
-        userAvatar: "https://via.placeholder.com/40x40/f0f0f0/333333?text=H",
-        content: "Kính chuẩn authentic không bạn?",
-        replies: [
-          {
-            id: 71,
-            userName: "Tường An",
-            userAvatar:
-              "https://via.placeholder.com/40x40/f0f0f0/333333?text=TA",
-            content: "Chuẩn authentic 100% nha bạn!",
-          },
-        ],
-      },
-      {
-        id: 8,
-        userName: "Mai",
-        userAvatar: "https://via.placeholder.com/40x40/f0f0f0/333333?text=M",
-        content: "Đã nhận hàng, rất ưng ý!",
-        replies: [],
-      },
     ],
   });
 
