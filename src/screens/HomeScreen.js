@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
+  Button,
   StyleSheet,
   ScrollView,
   Image,
@@ -12,11 +13,12 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { get } from "react-native/Libraries/TurboModule/TurboModuleRegistry";
-import { GetCategories } from "../servers/ProductService";
+import { GetCategories, getProducts } from "../servers/ProductService";
+import { FlatList } from "react-native-gesture-handler";
 
 export default function HomeScreen({ navigation }) {
   const [categories, setCategories] = useState([]);
-
+  const [products, setProducts] = useState([]);
   useEffect(() => {
     const checkLoginStatus = async () => {
       try {
@@ -35,23 +37,42 @@ export default function HomeScreen({ navigation }) {
     checkLoginStatus();
   }, []);
 
-  // Load danh mục
-  useEffect(() => {
-    const loadCategories = async () => {
-      try {
-        const res = await GetCategories();
-        if (res && Array.isArray(res)) {
-          setCategories(res);
-        } else {
-          Alert.alert("Lỗi", "Không thể tải danh mục sản phẩm");
-        }
-      } catch (error) {
-        Alert.alert("Lỗi", "Đã xảy ra lỗi khi tải danh mục");
-        console.log("Load category error:", error);
-      }
-    };
-    loadCategories();
-  }, []);
+  // // Load danh mục
+  // useEffect(() => {
+  //   const loadCategories = async () => {
+  //     try {
+  //       const res = await GetCategories();
+  //       if (res && Array.isArray(res)) {
+  //         setCategories(res);
+  //       } else {
+  //         Alert.alert("Lỗi", "Không thể tải danh mục sản phẩm");
+  //       }
+  //     } catch (error) {
+  //       Alert.alert("Lỗi", "Đã xảy ra lỗi khi tải danh mục");
+  //       console.log("Load category error:", error);
+  //     }
+  //   };
+  //   loadCategories();
+  // }, []);
+
+  // //Load sản phẩm
+  // useEffect(() => {
+  //   const loadProducts = async () => {
+  //     try {
+  //       const response = await getProducts();
+  //       if (response && Array.isArray(response)) {
+  //         setProducts(response);
+  //       } else {
+  //         Alert.alert("Lỗi", "Không thể tải danh sách sản phẩm");
+  //       }
+  //     } catch (error) {
+  //       Alert.alert("Lỗi", "Đã xảy ra lỗi khi tải sản phẩm");
+  //       console.log("Load product error:", error);
+  //     }
+  //   };
+  //   loadProducts();
+  // }, []);
+
   return (
     <ScrollView style={styles.container}>
       {/* Thanh tìm kiếm */}
@@ -73,6 +94,11 @@ export default function HomeScreen({ navigation }) {
         />
       </View>
 
+      <Button
+        title="Chi tiết"
+        onPress={() => navigation.navigate("ProductDetail")}
+      ></Button>
+
       {/* Danh Mục */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
@@ -93,26 +119,28 @@ export default function HomeScreen({ navigation }) {
         </ScrollView>
       </View>
 
-      {/* Mới Nhất */}
+      {/* Tất cả */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Mới Nhất</Text>
+          <Text style={styles.sectionTitle}>Tất cả</Text>
           <TouchableOpacity>
             <Ionicons name="chevron-forward" size={20} />
           </TouchableOpacity>
         </View>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {[1, 2, 3].map((_, index) => (
-            <View key={index} style={styles.productCard}>
-              <Image
-                source={require("../../assets/images/demo.jpg")} // Đổi ảnh
-                style={styles.productImage}
-              />
-              <Text style={styles.productTitle}>Sản phẩm {index + 1}</Text>
-              <Text style={styles.productPrice}>160.000đ</Text>
-            </View>
-          ))}
+        {/* Hiển thị lên danh sách sản phẩm: title, des, price,img */}
+        <ScrollView>
+          <View>
+            {products.map((prod, index) => {
+              return (
+                <TouchableOpacity key={index}>
+                  <View>{prod.productImages}</View>
+                  <Text>{prod.title}</Text>
+                  <Text>{prod.price}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
         </ScrollView>
       </View>
     </ScrollView>
