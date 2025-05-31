@@ -122,7 +122,7 @@ const ProductDetail = ({ route }) => {
 
     const newComment = {
       id: Math.random().toString(),
-      userName: "Người dùng hiện tại", // Bạn có thể lấy từ context/props thực tế
+      userName: "Người dùng hiện tại",
       userAvatar: "https://via.placeholder.com/40x40/f0f0f0/333333?text=You",
       content: replyText.trim(),
     };
