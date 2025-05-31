@@ -27,20 +27,12 @@ const ProfileScreen = ({ navigation }) => {
       <View style={styles.section}>
         <TouchableOpacity
           style={styles.menuItem}
-          onPress={() => handlePress("AccountScreen")}
+          onPress={() => handlePress("EditProfile")}
         >
-          <Text style={styles.menuItemText}>Tài khoản</Text>
+          <Text style={styles.menuItemText}>Chỉnh sửa hồ sơ</Text>
           <MaterialIcons name="keyboard-arrow-right" size={24} color="#555" />
         </TouchableOpacity>
         <View style={styles.separator} /> {/* Đường kẻ phân cách */}
-        <TouchableOpacity
-          style={styles.menuItem}
-          onPress={() => handlePress("AddressScreen")}
-        >
-          <Text style={styles.menuItemText}>Địa chỉ</Text>
-          <MaterialIcons name="keyboard-arrow-right" size={24} color="#555" />
-        </TouchableOpacity>
-        <View style={styles.separator} />
         <TouchableOpacity
           style={styles.menuItem}
           onPress={() => handlePress("PaymentMethodScreen")}

@@ -17,6 +17,7 @@ import PostsScreen from "./src/screens/PostsScreen";
 import OrdersScreen from "./src/screens/OrdersScreen";
 import ProductDetail from "./src/screens/ProductDetail";
 import AppInfoScreen from "./src/screens/AppInfoScreen";
+import EditProfileScreen from "./src/screens/EditProfileScreen";
 // import SettingsScreen from './src/screens/Settings/SettingsScreen';
 
 const Stack = createNativeStackNavigator();
@@ -96,6 +97,7 @@ export default function App() {
         <Stack.Screen name="Main" component={MainTabs} />
         <Stack.Screen name="ProductDetail" component={ProductDetail} />
         <Stack.Screen name="AppInfo" component={AppInfoScreen} />
+        <Stack.Screen name="EditProfile" component={EditProfileScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
