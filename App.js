@@ -20,7 +20,11 @@ import AppInfoScreen from "./src/screens/AppInfoScreen";
 import CartScreen from "./src/screens/CartScreen";
 import CheckoutScreen from "./src/screens/CheckoutScreen";
 import OrderDetailsScreen from "./src/screens/OrderDetailsScreen";
-
+import ManageOrdersScreen from "./src/screens/ManageOrdersScreen";
+import FailedDeliveryDetailsScreen from "./src/screens/FailedDeliveryDetailsScreen";
+import SuccessfulDeliveryDetailsScreen from "./src/screens/SuccessfulDeliveryDetailsScreen";
+import ActivityScreen from "./src/screens/ActivityScreen";
+import TransactionHistoryScreen from "./src/screens/TransactionHistoryScreen";
 // import SettingsScreen from './src/screens/Settings/SettingsScreen';
 
 const Stack = createNativeStackNavigator();
@@ -33,6 +37,10 @@ function OrdersStackScreen() {
       <OrdersStack.Screen name="Cart" component={CartScreen} />
       <OrdersStack.Screen name="Checkout" component={CheckoutScreen} />
       <OrdersStack.Screen name="OrderDetails" component={OrderDetailsScreen} />
+      <OrdersStack.Screen name="ManageOrders" component={ManageOrdersScreen} />
+      <OrdersStack.Screen name="FailedDeliveryDetails" component={FailedDeliveryDetailsScreen} />
+      <OrdersStack.Screen name="SuccessfulDeliveryDetails" component={SuccessfulDeliveryDetailsScreen} />
+      <OrdersStack.Screen name="TransactionHistory" component={ActivityScreen} />
     </OrdersStack.Navigator>
   );
 }
@@ -112,6 +120,12 @@ export default function App() {
         <Stack.Screen name="Main" component={MainTabs} />
         <Stack.Screen name="ProductDetail" component={ProductDetail} />
         <Stack.Screen name="AppInfo" component={AppInfoScreen} />
+        <Stack.Screen name="OrderDetails" component={OrderDetailsScreen} />
+        <Stack.Screen name="ManageOrders" component={ManageOrdersScreen} />
+        <Stack.Screen name="FailedDeliveryDetails" component={FailedDeliveryDetailsScreen} />
+        <Stack.Screen name="SuccessfulDeliveryDetails" component={SuccessfulDeliveryDetailsScreen} />
+        <Stack.Screen name="Activity" component={ActivityScreen} />
+        <Stack.Screen name="TransactionHistory" component={TransactionHistoryScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
