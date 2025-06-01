@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,12 @@ import {
   TouchableOpacity,
   Image,
   FlatList, // Using FlatList for the list of transactions
+  Modal,
+  TextInput,
+  Keyboard,
+  TouchableWithoutFeedback,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -35,6 +41,49 @@ const TransactionHistoryScreen = ({ navigation }) => {
     // Add more mock transactions as needed
   ];
 
+  // State cho modal đánh giá
+  const [isReviewModalVisible, setReviewModalVisible] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [rating, setRating] = useState(0);
+  const [reviewText, setReviewText] = useState('');
+  // State cho modal hoàn thành
+  const [isCompleteModalVisible, setCompleteModalVisible] = useState(false);
+  const [lastRating, setLastRating] = useState(0);
+
+  // Hàm mở modal đánh giá
+  const openReviewModal = (order) => {
+    setSelectedOrder(order);
+    setRating(0);
+    setReviewText('');
+    setReviewModalVisible(true);
+  };
+
+  // Hàm gửi đánh giá
+  const handleSendReview = () => {
+    setReviewModalVisible(false);
+    setLastRating(rating);
+    setTimeout(() => setCompleteModalVisible(true), 300); // Đợi modal đánh giá đóng rồi mới hiện modal hoàn thành
+    setTimeout(() => setCompleteModalVisible(false), 1800); // Tự động ẩn sau 1.5s
+  };
+
+  // Render dãy sao
+  const renderStars = () => {
+    let stars = [];
+    for (let i = 1; i <= 5; i++) {
+      stars.push(
+        <TouchableOpacity key={i} onPress={() => setRating(i)}>
+          <Ionicons
+            name={i <= rating ? 'star' : 'star-outline'}
+            size={36}
+            color={'#FFB800'}
+            style={{ marginHorizontal: 2 }}
+          />
+        </TouchableOpacity>
+      );
+    }
+    return <View style={{ flexDirection: 'row', justifyContent: 'center', marginVertical: 12 }}>{stars}</View>;
+  };
+
   const renderTransactionItem = ({ item }) => (
     <View style={styles.transactionItemContainer}>
       <Image source={{ uri: item.product.image }} style={styles.productImage} />
@@ -45,7 +94,7 @@ const TransactionHistoryScreen = ({ navigation }) => {
             <View style={styles.dateChip}>
                  <Text style={styles.dateText}>{item.product.date}</Text>
             </View>
-            <TouchableOpacity style={styles.reviewButton}>
+            <TouchableOpacity style={styles.reviewButton} onPress={() => openReviewModal(item)}>
                 <Text style={styles.reviewButtonText}>Đánh giá</Text>
             </TouchableOpacity>
         </View>
@@ -86,6 +135,85 @@ const TransactionHistoryScreen = ({ navigation }) => {
         keyExtractor={(item) => item.id.toString()}
         contentContainerStyle={styles.listContentContainer}
       />
+
+      {/* Review Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={isReviewModalVisible}
+        onRequestClose={() => setReviewModalVisible(false)}
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+            <View style={modalStyles.modalBackground}>
+              <View style={modalStyles.modalContainer}>
+                {/* Tiêu đề */}
+                <Text style={modalStyles.modalTitle}>Đánh giá</Text>
+                {/* Thông tin người bán và đơn hàng */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                  <Image
+                    source={{ uri: 'https://randomuser.me/api/portraits/men/32.jpg' }}
+                    style={modalStyles.avatar}
+                  />
+                  <View style={{ marginLeft: 10 }}>
+                    <Text style={{ fontSize: 15, color: '#333' }}>
+                      Người bán: <Text style={{ fontWeight: 'bold' }}>Tường An</Text>
+                    </Text>
+                    <Text style={{ fontSize: 14, color: '#323660', fontWeight: 'bold' }}>
+                      Đơn hàng {selectedOrder?.product.orderId}
+                    </Text>
+                  </View>
+                </View>
+                {/* Dãy sao */}
+                {renderStars()}
+                {/* Ô nhập đánh giá */}
+                <TextInput
+                  style={modalStyles.textInput}
+                  placeholder="Nhập đánh giá của bạn..."
+                  placeholderTextColor="#888"
+                  value={reviewText}
+                  onChangeText={setReviewText}
+                  multiline
+                  numberOfLines={4}
+                />
+                {/* Nút gửi */}
+                <TouchableOpacity style={modalStyles.sendButton} onPress={handleSendReview}>
+                  <Text style={modalStyles.sendButtonText}>Gửi đi!</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </KeyboardAvoidingView>
+        </TouchableWithoutFeedback>
+      </Modal>
+
+      {/* Complete Modal */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={isCompleteModalVisible}
+        onRequestClose={() => setCompleteModalVisible(false)}
+      >
+        <View style={completeModalStyles.overlay}>
+          <View style={completeModalStyles.container}>
+            <View style={completeModalStyles.iconCircle}>
+              <Ionicons name="checkmark" size={32} color="#323660" />
+            </View>
+            <Text style={completeModalStyles.title}>Hoàn thành!</Text>
+            <Text style={completeModalStyles.subtitle}>Cảm ơn bài đánh giá của bạn</Text>
+            <View style={completeModalStyles.starsRow}>
+              {[1,2,3,4,5].map(i => (
+                <Ionicons
+                  key={i}
+                  name={i <= lastRating ? 'star' : 'star-outline'}
+                  size={36}
+                  color={'#FFB800'}
+                  style={{ marginHorizontal: 2 }}
+                />
+              ))}
+            </View>
+          </View>
+        </View>
+      </Modal>
 
        {/* Footer (Placeholder for Tab Bar) */}
        {/* This screen should ideally be part of the Tab Navigator structure */}
@@ -193,6 +321,122 @@ const styles = StyleSheet.create({
          fontSize: 13,
          fontWeight: 'bold',
      },
+});
+
+// Thêm style cho modal đánh giá
+const modalStyles = StyleSheet.create({
+  modalBackground: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContainer: {
+    backgroundColor: '#fff',
+    padding: 20,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '70%',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 18,
+    color: '#222',
+    textAlign: 'left',
+  },
+  avatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    marginRight: 8,
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+  textInput: {
+    backgroundColor: '#f8f8f8',
+    borderRadius: 10,
+    padding: 14,
+    fontSize: 15,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    marginBottom: 18,
+    minHeight: 70,
+    color: '#222',
+  },
+  sendButton: {
+    backgroundColor: '#323660',
+    borderRadius: 8,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginTop: 0,
+  },
+  sendButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+});
+
+// Thêm style cho modal hoàn thành
+const completeModalStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.18)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  container: {
+    backgroundColor: '#fff',
+    borderRadius: 22,
+    paddingTop: 44,
+    paddingBottom: 28,
+    paddingHorizontal: 18,
+    alignItems: 'center',
+    width: '85%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 8,
+    position: 'relative',
+  },
+  iconCircle: {
+    position: 'absolute',
+    top: -32,
+    alignSelf: 'center',
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#fff',
+    borderWidth: 6,
+    borderColor: '#E6E8F0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.10,
+    shadowRadius: 6,
+    elevation: 6,
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#222',
+    marginTop: 12,
+    marginBottom: 6,
+    textAlign: 'center',
+  },
+  subtitle: {
+    fontSize: 15,
+    color: '#222',
+    marginBottom: 18,
+    textAlign: 'center',
+  },
+  starsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: 2,
+  },
 });
 
 export default TransactionHistoryScreen; 
