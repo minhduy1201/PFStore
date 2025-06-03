@@ -1,26 +1,12 @@
-import React, { useEffect, useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  Image,
-  TextInput,
-  TouchableOpacity,
-  Alert,
-  Dimensions,
-} from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { GetCategories, getProducts } from "../servers/ProductService";
-
-const { width } = Dimensions.get("window");
-// Calculate card width for two columns with spacing and padding
-const cardWidth = (width - 16 * 2 - 10) / 2; // (screenWidth - horizontalPadding * 2 - spaceBetweenCards) / 2
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, Image, TextInput, TouchableOpacity, Alert } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { get } from 'react-native/Libraries/TurboModule/TurboModuleRegistry';
+import { GetCategories } from '../servers/ProductService';
 
 export default function HomeScreen({ navigation }) {
-  const [categories, setCategories] = useState([]);
-  const [products, setProducts] = useState([]);
+    const [categories, setCategories] = useState([]);
 
   useEffect(() => {
     const checkLoginStatus = async () => {
@@ -55,34 +41,17 @@ export default function HomeScreen({ navigation }) {
     };
     loadCategories();
   }, []);
-
-  useEffect(() => {
-    const loadProducts = async () => {
-      try {
-        const res = await getProducts();
-        if (res && Array.isArray(res)) {
-          setProducts(res);
-        }
-      } catch (error) {
-        Alert.alert("Lỗi", "Đã xảy ra lỗi khi tải sản phẩm");
-        console.log("Load product:", error);
-      }
-    };
-    loadProducts();
-  }, []);
-
   return (
     <ScrollView style={styles.container}>
-      {/* Header (Search Bar) */}
+      {/* Thanh tìm kiếm */}
       <View style={styles.header}>
-        <Image
-          source={require("../../assets/images/logo.jpg")}
-          style={styles.logo}
-          resizeMode="contain"
-        />
-        <TextInput style={styles.searchInput} placeholder="Tìm kiếm sản phẩm" />
-        <Ionicons name="notifications-outline" size={24} color="black" />
-      </View>
+  <Image
+    source={require('../../assets/images/logo.jpg')}
+    style={styles.logo}
+    resizeMode="contain"
+  />
+  <TextInput style={styles.searchInput} placeholder="Tìm kiếm sản phẩm" />
+</View>
 
       {/* Promotion Banner */}
       <View style={styles.banner}>
@@ -161,6 +130,81 @@ export default function HomeScreen({ navigation }) {
           ))}
         </View>
       </View>
+
+    {/* Popup lọc sản phẩm */}
+    {showFilter && (
+        <Modal
+          transparent={true}
+          animationType="slide"
+          visible={showFilter}
+          onRequestClose={toggleFilter}>
+          <TouchableWithoutFeedback onPress={() => setShowFilter(false)}>
+            <View style={styles.overlay}></View>
+          </TouchableWithoutFeedback>
+          <View style={styles.filterContainer}>
+            <View style={styles.filterContent}>
+                <Text style={styles.filterTitle}>Lọc Sản Phẩm</Text>
+
+                {/* Thương hiệu */}
+                <Text style={styles.filterLabel}>Thương hiệu</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                                <View style={styles.categories}>
+                                    {categories.map((cat, index) => (
+                                        <TouchableOpacity
+                                            key={index}
+                                            style={[styles.categoryItem, selectedBrands.includes(cat.name) && styles.selectedCategory]}
+                                            onPress={() => toggleBrandSelection(cat.name)}>
+                                            <Text style={styles.categoryText}>{cat.name}</Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+                            </ScrollView>
+
+                {/* Size */}
+                <Text style={styles.filterLabel}>Size</Text>
+                <View style={styles.categories}>
+                                {['XS', 'S', 'M', 'L', 'XL', '2XL'].map((sizeOption, index) => (
+                                    <TouchableOpacity
+                                        key={index}
+                                        style={[styles.categoryItem, selectedSizes.includes(sizeOption) && styles.selectedCategory]}
+                                        onPress={() => toggleSizeSelection(sizeOption)}>
+                                        <Text style={styles.categoryText}>{sizeOption}</Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+
+                {/* Giá */}
+                <Text style={styles.filterLabel}>Giá</Text>
+                <View style={styles.priceContainer}>
+                   <TextInput
+                       style={styles.filterInput}
+                       value={minPrice}
+                       onChangeText={setMinPrice}
+                       placeholder="Giá tối thiểu"
+                       keyboardType="numeric"
+                    />
+                    <TextInput
+                       style={styles.filterInput}
+                       value={maxPrice}
+                       onChangeText={setMaxPrice}
+                       placeholder="Giá tối đa"
+                       keyboardType="numeric"
+                    />
+                </View>
+
+                {/* Nút thiết lập lại và áp dụng */}
+                <View style={styles.buttonContainer}>
+                    <TouchableOpacity onPress={resetFilters} style={styles.buttonReset}>
+                        <Text style={styles.buttonText}>Thiết lập lại</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={applyFilter} style={styles.buttonApply}>
+                         <Text style={styles.buttonText}>Áp dụng</Text>
+                    </TouchableOpacity>
+                </View>
+            </View>
+        </View>
+    </Modal>
+    )}
     </ScrollView>
   );
 }
@@ -227,55 +271,27 @@ const styles = StyleSheet.create({
     color: "#333",
   },
 
-  // --- New Styles for Products Grid ---
-  productsGridContainer: {
-    flexDirection: "row", // Arrange items in a row
-    flexWrap: "wrap", // Allow items to wrap to the next line
-    justifyContent: "space-between", // Distribute space between items
-  },
-  productCard: {
-    borderWidth: 1,
-    borderColor: "#f0f0f0",
-    backgroundColor: "#f0f0f0",
-    borderRadius: 15,
-    width: cardWidth, // Use the calculated cardWidth
-    marginBottom: 10, // Space between rows
-    padding: 8,
-    height: 220, // Adjusted height to accommodate image and text better
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    overflow: "hidden",
-  },
-  productImage: {
-    width: "100%",
-    height: cardWidth - 16, // Keep aspect ratio, subtract padding
-    borderRadius: 10,
-    backgroundColor: "#eee",
-    marginBottom: 6,
-    resizeMode: "cover",
-  },
-  productInfo: {
-    flex: 1,
-    justifyContent: "space-between",
-    width: "100%",
-  },
-  productTitle: {
-    fontSize: 13,
-    fontWeight: "600",
-    marginBottom: 1,
-    color: "#333",
-    lineHeight: 18,
-    // Add these two lines to limit text to two lines
-    maxHeight: 36, // Approx height for 2 lines (18 * 2)
-    overflow: "hidden",
-  },
-  productPrice: {
-    fontSize: 14,
-    fontWeight: "bold",
-    marginTop: 1,
-  },
-  logo: {
-    width: 32,
-    height: 32,
-  },
-});
+    productCard: {
+      width: 120,
+      marginRight: 16,
+    },
+    productImage: {
+      width: '100%',
+      height: 100,
+      borderRadius: 10,
+      backgroundColor: '#eee',
+    },
+    productTitle: {
+      marginTop: 5,
+      fontSize: 14,
+    },
+    productPrice: {
+      fontWeight: 'bold',
+      marginTop: 2,
+    },
+    logo: {
+        width: 32,
+        height: 32,
+      },
+      
+  });
