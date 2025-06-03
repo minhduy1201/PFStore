@@ -17,6 +17,7 @@ import PostsScreen from "./src/screens/PostsScreen";
 import OrdersScreen from "./src/screens/OrdersScreen";
 import ProductDetail from "./src/screens/ProductDetail";
 import AppInfoScreen from "./src/screens/AppInfoScreen";
+
 import CartScreen from "./src/screens/CartScreen";
 import CheckoutScreen from "./src/screens/CheckoutScreen";
 import OrderDetailsScreen from "./src/screens/OrderDetailsScreen";
@@ -25,6 +26,9 @@ import FailedDeliveryDetailsScreen from "./src/screens/FailedDeliveryDetailsScre
 import SuccessfulDeliveryDetailsScreen from "./src/screens/SuccessfulDeliveryDetailsScreen";
 import ActivityScreen from "./src/screens/ActivityScreen";
 import TransactionHistoryScreen from "./src/screens/TransactionHistoryScreen";
+
+import EditProfileScreen from "./src/screens/EditProfileScreen";
+
 // import SettingsScreen from './src/screens/Settings/SettingsScreen';
 
 const Stack = createNativeStackNavigator();
@@ -120,12 +124,16 @@ export default function App() {
         <Stack.Screen name="Main" component={MainTabs} />
         <Stack.Screen name="ProductDetail" component={ProductDetail} />
         <Stack.Screen name="AppInfo" component={AppInfoScreen} />
+
         <Stack.Screen name="OrderDetails" component={OrderDetailsScreen} />
         <Stack.Screen name="ManageOrders" component={ManageOrdersScreen} />
         <Stack.Screen name="FailedDeliveryDetails" component={FailedDeliveryDetailsScreen} />
         <Stack.Screen name="SuccessfulDeliveryDetails" component={SuccessfulDeliveryDetailsScreen} />
         <Stack.Screen name="Activity" component={ActivityScreen} />
         <Stack.Screen name="TransactionHistory" component={TransactionHistoryScreen} />
+
+        <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+
       </Stack.Navigator>
     </NavigationContainer>
   );

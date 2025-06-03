@@ -8,6 +8,7 @@ import {
   Alert,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons"; // Sử dụng MaterialIcons cho mũi tên
+import { Logout } from "../servers/connection";
 
 const ProfileScreen = ({ navigation }) => {
   // Hàm xử lý khi nhấn vào một mục menu
@@ -27,20 +28,12 @@ const ProfileScreen = ({ navigation }) => {
       <View style={styles.section}>
         <TouchableOpacity
           style={styles.menuItem}
-          onPress={() => handlePress("AccountScreen")}
+          onPress={() => handlePress("EditProfile")}
         >
-          <Text style={styles.menuItemText}>Tài khoản</Text>
+          <Text style={styles.menuItemText}>Chỉnh sửa hồ sơ</Text>
           <MaterialIcons name="keyboard-arrow-right" size={24} color="#555" />
         </TouchableOpacity>
         <View style={styles.separator} /> {/* Đường kẻ phân cách */}
-        <TouchableOpacity
-          style={styles.menuItem}
-          onPress={() => handlePress("AddressScreen")}
-        >
-          <Text style={styles.menuItemText}>Địa chỉ</Text>
-          <MaterialIcons name="keyboard-arrow-right" size={24} color="#555" />
-        </TouchableOpacity>
-        <View style={styles.separator} />
         <TouchableOpacity
           style={styles.menuItem}
           onPress={() => handlePress("PaymentMethodScreen")}
@@ -81,21 +74,7 @@ const ProfileScreen = ({ navigation }) => {
       </View>
 
       {/* Nút Đăng xuất */}
-      <TouchableOpacity
-        style={styles.logoutButton}
-        onPress={() =>
-          Alert.alert("Đăng xuất", "Bạn có chắc chắn muốn đăng xuất?", [
-            {
-              text: "Đóng",
-              onPress: () => console.log("Đóng"),
-            },
-            {
-              text: "OK",
-              onPress: () => console.log("đăng xuất"),
-            },
-          ])
-        }
-      >
+      <TouchableOpacity style={styles.logoutButton} onPress={Logout}>
         <Text style={styles.logoutButtonText}>Đăng xuất</Text>
       </TouchableOpacity>
     </ScrollView>
