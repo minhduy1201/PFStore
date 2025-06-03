@@ -107,8 +107,17 @@ export default function HomeScreen({ navigation }) {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.categoriesScrollContainer}
         >
-          {categories.map((cat, index) => (
-            <TouchableOpacity key={index} style={styles.categoryItem}>
+          {categories.map((cat) => (
+            <TouchableOpacity
+              key={cat.categoryId.toString()}
+              style={styles.categoryItem}
+              onPress={() =>
+                navigation.navigate("ProductByCat", {
+                  categoryId: cat.categoryId,
+                  categoryName: cat.name,
+                })
+              }
+            >
               <Text style={styles.categoryText}>{cat.name}</Text>
             </TouchableOpacity>
           ))}
