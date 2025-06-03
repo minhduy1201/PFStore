@@ -1,454 +1,501 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
-  Image,
+  TextInput,
   StyleSheet,
   ScrollView,
+  Image,
   TouchableOpacity,
-  FlatList,
-  TextInput,
-  Platform,
-  KeyboardAvoidingView,
-  Keyboard,
-  Button,
+  ActivityIndicator, // Để hiển thị trạng thái tải
+  Alert,
+  Dimensions,
 } from "react-native";
-import { FontAwesome, MaterialIcons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
+import Swiper from "react-native-swiper"; // Để tạo carousel ảnh
+import { getProductById } from "../servers/ProductService"; // Import hàm mới
 
-// Component con để hiển thị một bình luận/phản hồi
-const CommentItem = ({ comment, onReplyPress, isReply = false }) => (
-  <View
-    style={[styles.commentItemContainer, isReply && styles.replyItemContainer]}
-  >
-    <Image source={{ uri: comment.userAvatar }} style={styles.commentAvatar} />
-    <View style={styles.commentContentWrapper}>
-      <View style={styles.commentBubble}>
-        <Text style={styles.commentUserName}>{comment.userName}</Text>
-        <Text style={styles.commentText}>{comment.content}</Text>
-      </View>
-      {!isReply && (
-        <TouchableOpacity
-          onPress={() => onReplyPress(comment.id)}
-          style={styles.replyButton}
-        >
-          <Text style={styles.replyButtonText}>Phản hồi</Text>
-        </TouchableOpacity>
-      )}
-    </View>
-  </View>
-);
+const { width } = Dimensions.get("window");
+//số dòng tối đa cho mô tả
+const MAX_DESCRIPTION_LINES = 3;
 
-const ProductDetail = ({ route }) => {
-  const [replyingToCommentId, setReplyingToCommentId] = useState(null);
-  const [replyText, setReplyText] = useState("");
-  const replyInputRef = useRef(null);
-  const [isFavorite, setIsFavorite] = useState(false);
+export default function ProductDetail({ route, navigation }) {
+  const { productId } = route.params; // Lấy productId từ tham số điều hướng
+  const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [showFullDescription, setShowFullDescription] = useState(false);
 
-  const [product, setProduct] = useState({
-    name: "Kính mắt Chanel nữ authentic",
-    price: 170000,
-    image:
-      "https://via.placeholder.com/400x220/f0f0f0/333333?text=Product+Image",
-    description: [
-      "Kính còn khoảng 95%, không trầy xước.",
-      "Form kính chuẩn, đeo nhẹ mặt.",
-      "Tròng tốt, không mờ hay loá.",
-      "Full hộp + khăn lau kính đi kèm.",
-    ],
-    rating: 4.0,
-    seller: {
-      name: "Tường An",
-      avatar:
-        "https://via.placeholder.com/40x40/f0f0f0/333333?text=SellerAvatar",
-    },
-    comments: [
-      {
-        id: 1,
-        userName: "Tô Nhật",
-        userAvatar: "https://via.placeholder.com/40x40/f0f0f0/333333?text=TN",
-        content: "Kính này gọng gì vậy?",
-        replies: [
-          {
-            id: 11,
-            userName: "Tường An",
-            userAvatar:
-              "https://via.placeholder.com/40x40/f0f0f0/333333?text=TA",
-            content: "Kính gọng kim loại, dẻo và bền lắm b",
-          },
-        ],
-      },
-      {
-        id: 2,
-        userName: "An",
-        userAvatar: "https://via.placeholder.com/40x40/f0f0f0/333333?text=An",
-        content: "Còn hộp không ạ?",
-        replies: [],
-      },
-      {
-        id: 3,
-        userName: "Minh",
-        userAvatar: "https://via.placeholder.com/40x40/f0f0f0/333333?text=M",
-        content: "Đã mua, kính rất đẹp!",
-        replies: [],
-      },
-      {
-        id: 4,
-        userName: "Lan",
-        userAvatar: "https://via.placeholder.com/40x40/f0f0f0/333333?text=L",
-        content: "Có ship COD không shop?",
-        replies: [
-          {
-            id: 41,
-            userName: "Tường An",
-            userAvatar:
-              "https://via.placeholder.com/40x40/f0f0f0/333333?text=TA",
-            content: "Dạ có ạ!",
-          },
-        ],
-      },
-    ],
-  });
-
-  const handleReplyPress = (commentId) => {
-    setReplyingToCommentId(commentId);
-    setReplyText("");
-    setTimeout(() => {
-      replyInputRef.current?.focus();
-    }, 100);
-  };
-
-  const handleSendReply = () => {
-    if (!replyText.trim()) return;
-
-    const newComment = {
-      id: Math.random().toString(),
-      userName: "Người dùng hiện tại",
-      userAvatar: "https://via.placeholder.com/40x40/f0f0f0/333333?text=You",
-      content: replyText.trim(),
+  useEffect(() => {
+    const loadProductDetail = async () => {
+      try {
+        setLoading(true);
+        const res = await getProductById(productId);
+        setProduct(res);
+      } catch (err) {
+        console.error("Failed to load product detail:", err);
+        setError(true);
+        Alert.alert(
+          "Lỗi",
+          "Không thể tải chi tiết sản phẩm. Vui lòng thử lại sau."
+        );
+      } finally {
+        setLoading(false);
+      }
     };
 
-    setProduct((prevProduct) => {
-      const updatedComments = prevProduct.comments.map((comment) => {
-        if (comment.id === replyingToCommentId) {
-          return {
-            ...comment,
-            replies: [...comment.replies, newComment],
-          };
-        }
-        return comment;
-      });
-      return { ...prevProduct, comments: updatedComments };
-    });
+    if (productId) {
+      loadProductDetail();
+    } else {
+      Alert.alert("Lỗi", "Không tìm thấy ID sản phẩm.");
+      navigation.goBack(); // Quay lại nếu không có ID sản phẩm
+    }
+  }, [productId]); // Chạy lại khi productId thay đổi
 
-    setReplyText("");
-    setReplyingToCommentId(null);
-    Keyboard.dismiss();
-  };
+  if (loading) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color="#007bff" />
+        <Text>Đang tải sản phẩm...</Text>
+      </View>
+    );
+  }
 
-  const renderDescription = () =>
-    product.description.map((line, index) => (
-      <Text key={index} style={styles.descriptionLine}>
-        • {line}
-      </Text>
-    ));
-
-  const renderCommentAndReplies = ({ item: comment }) => (
-    <View>
-      <CommentItem comment={comment} onReplyPress={handleReplyPress} />
-      {comment.replies.map((reply) => (
-        <CommentItem key={reply.id} comment={reply} isReply={true} />
-      ))}
-      {replyingToCommentId === comment.id && (
-        <View style={styles.replyInputContainer}>
-          <TextInput
-            ref={replyInputRef}
-            style={styles.replyTextInput}
-            placeholder={`Trả lời ${comment.userName}...`}
-            value={replyText}
-            onChangeText={setReplyText}
-            onSubmitEditing={handleSendReply}
-            returnKeyType="send"
-          />
-          <TouchableOpacity onPress={handleSendReply}>
-            <MaterialIcons name="send" size={24} color="#007bff" />
-          </TouchableOpacity>
-        </View>
-      )}
-    </View>
-  );
-
-  return (
-    // KeyboardAvoidingView bao bọc tất cả để đẩy nội dung lên khi bàn phím hiện
-    <KeyboardAvoidingView
-      style={styles.fullScreenContainer} // Đặt flex: 1 ở đây
-      behavior={Platform.OS ? "padding" : "height"}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
-    >
-      {/* ScrollView chứa tất cả nội dung có thể cuộn */}
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollViewContentContainer} // Đảm bảo paddingBottom
-        keyboardShouldPersistTaps="handled"
-      >
-        {/* Phần hình ảnh */}
-        <Image source={{ uri: product.image }} style={styles.productImage} />
-
-        {/* Giá + Tên */}
-        <View style={styles.productInfo}>
-          <Text style={styles.price}>{product.price.toLocaleString()}đ</Text>
-          <Text style={styles.title}>{product.name}</Text>
-        </View>
-
-        {/* Mô tả */}
-        <View style={styles.descriptionBox}>{renderDescription()}</View>
-
-        {/* Thông tin người bán */}
-        <View style={styles.sellerBox}>
-          <Image
-            source={{ uri: product.seller.avatar }}
-            style={styles.avatar}
-          />
-          <View style={styles.sellerInfo}>
-            <Text style={styles.sellerName}>{product.seller.name}</Text>
-            <View style={styles.ratingRow}>
-              <Text style={styles.ratingText}>{product.rating}</Text>
-              <FontAwesome name="star" size={16} color="#f5a623" />
-              <Button
-                title="Xem đánh giá"
-                style={{ color: "#007bff", marginLeft: 10 }}
-              ></Button>
-            </View>
-          </View>
-        </View>
-
-        {/* Bình luận */}
-        <View style={styles.commentSection}>
-          <Text style={styles.commentSectionTitle}>Bình luận</Text>
-          <View style={styles.commentListContainer}>
-            <FlatList
-              data={product.comments}
-              keyExtractor={(item) => item.id.toString()}
-              renderItem={renderCommentAndReplies}
-              showsVerticalScrollIndicator={false}
-            />
-          </View>
-        </View>
-
-        <View style={styles.mainCommentInputRowContainer}>
-          <View style={styles.mainCommentInputRow}>
-            <TextInput
-              placeholder="Nhập bình luận..."
-              style={styles.mainCommentInput}
-            />
-            <TouchableOpacity>
-              <MaterialIcons name="send" size={24} color="#007bff" />
-            </TouchableOpacity>
-          </View>
-        </View>
-      </ScrollView>
-
-      {/* Thanh hành động cố định ở cuối màn hình */}
-      <View style={styles.bottomActionBar}>
+  if (error || !product) {
+    return (
+      <View style={styles.centered}>
+        <Text>Không thể hiển thị chi tiết sản phẩm.</Text>
         <TouchableOpacity
-          style={styles.favoriteButton}
-          onPress={() => setIsFavorite(!isFavorite)}
+          style={styles.button}
+          onPress={() => navigation.goBack()}
         >
-          <FontAwesome
-            name={isFavorite ? "heart" : "heart-o"} // Biểu tượng trái tim đặc/rỗng
-            size={24}
-            color={isFavorite ? "red" : "#333"} // Màu khi đã yêu thích
-          />
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.addToCartButton}>
-          <Text style={styles.buttonText}>Thêm vào giỏ</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.buyNowButton}>
-          <Text style={styles.buttonText}>Mua ngay</Text>
+          <Text style={styles.buttonText}>Quay lại</Text>
         </TouchableOpacity>
       </View>
-    </KeyboardAvoidingView>
-  );
-};
+    );
+  }
 
-export default ProductDetail;
+  // Hàm để định dạng giá
+  const formatPrice = (price) => {
+    return price.toLocaleString("vi-VN", {
+      style: "currency",
+      currency: "VND",
+    });
+  };
+
+  // Chuẩn bị các dòng mô tả
+  const descriptionLines = product.description
+    ? product.description.split(".").filter(Boolean)
+    : [];
+
+  // Xác định xem có cần hiển thị nút "Xem thêm" hay không
+  const needsReadMore = descriptionLines.length > MAX_DESCRIPTION_LINES;
+
+  // Các dòng mô tả sẽ hiển thị
+  const displayedDescriptionLines = showFullDescription
+    ? descriptionLines
+    : descriptionLines.slice(0, MAX_DESCRIPTION_LINES);
+
+  return (
+    <ScrollView style={styles.container}>
+      {/*Nút trở về */}
+      <View style={styles.header}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.backButton}
+        >
+          <Ionicons name="arrow-back" size={24} color="black" />
+        </TouchableOpacity>
+      </View>
+
+      {/* Product Image Carousel */}
+      {product.images && product.images.length > 0 ? (
+        <Swiper
+          style={styles.imageSwiper}
+          height={width * 0.9} // Chiều cao ảnh gần bằng chiều rộng màn hình để tạo hình vuông
+          showsButtons={false}
+          dotStyle={styles.swiperDot}
+          activeDotStyle={styles.swiperActiveDot}
+        >
+          {product.images.map((imageUri, index) => (
+            <View key={index} style={styles.slide}>
+              <Image
+                source={{ uri: imageUri }}
+                style={styles.productImage}
+                resizeMode="cover"
+              />
+            </View>
+          ))}
+        </Swiper>
+      ) : (
+        <Image
+          source={require("../../assets/images/icon.png")} // Thêm ảnh placeholder nếu không có ảnh
+          style={styles.productImagePlaceholder}
+          resizeMode="contain"
+        />
+      )}
+
+      <View style={styles.content}>
+        {/* Tiêu đề và giá */}
+        <View style={styles.priceTitleContainer}>
+          <Text style={styles.productPrice}>{formatPrice(product.price)}</Text>
+          {/* Nút chia sẻ nằm ở đây theo mockup ban đầu */}
+          <TouchableOpacity>
+            <Ionicons name="share-social-outline" size={24} color="#666" />
+          </TouchableOpacity>
+        </View>
+
+        <Text style={styles.productTitle}>{product.title}</Text>
+
+        {/* Description */}
+        <View style={styles.descriptionContainer}>
+          {displayedDescriptionLines.length > 0 ? (
+            displayedDescriptionLines.map((line, index) => (
+              <Text key={index} style={styles.descriptionText}>
+                • {line.trim()}
+              </Text>
+            ))
+          ) : (
+            <Text style={styles.descriptionText}>Không có mô tả chi tiết.</Text>
+          )}
+
+          {needsReadMore && (
+            <TouchableOpacity
+              onPress={() => setShowFullDescription(!showFullDescription)}
+              style={styles.readMoreButton}
+            >
+              <Text style={styles.readMoreButtonText}>
+                {showFullDescription ? "Thu gọn" : "Xem thêm"}
+              </Text>
+            </TouchableOpacity>
+          )}
+
+          {product.attributes && product.attributes.length > 0 && (
+            <View style={styles.attributesContainer}>
+              {product.attributes.map((attr, index) => (
+                <Text key={index} style={styles.attributeText}>
+                  • {attr.attributeName}: {attr.value}
+                </Text>
+              ))}
+            </View>
+          )}
+        </View>
+
+        {/* Thông tin người bán */}
+        {product.seller && (
+          <TouchableOpacity style={styles.sellerContainer}>
+            <Image
+              source={require("../../assets/images/logo.jpg")} // Thay thế bằng ảnh đại diện người bán nếu có
+              style={styles.sellerAvatar}
+            />
+            <View style={styles.sellerInfo}>
+              <View style={styles.sellerNameRow}>
+                <Text style={styles.sellerName}>{product.seller.fullName}</Text>
+                {product.seller.isVerified && (
+                  <Ionicons
+                    name="checkmark-circle"
+                    size={18}
+                    color="#4CAF50"
+                    style={styles.verifiedIcon}
+                  />
+                )}
+              </View>
+              <View style={styles.sellerRating}>
+                <Text style={styles.ratingText}>4.0</Text>{" "}
+                {/* Hardcoded for now, ideal to fetch from API */}
+                {[...Array(5)].map((_, i) => (
+                  <Ionicons
+                    key={i}
+                    name={i < 4 ? "star" : "star-outline"} // Assuming 4 stars for now
+                    size={16}
+                    color="#FFD700"
+                  />
+                ))}
+                <Text style={styles.ratingText}>
+                  {" "}
+                  ({product.seller.productCount || 10} sản phẩm đã bán)
+                </Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color="#ccc" />
+          </TouchableOpacity>
+        )}
+
+        {/* Comments Section */}
+        <View style={styles.commentsSection}>
+          <Text style={styles.commentsTitle}>Bình luận</Text>
+          {/* Example comments - you'd map over actual comment data */}
+          <View style={styles.commentItem}>
+            {/* Nếu có avatar người comment, uncomment dòng dưới */}
+            {/* <Image
+              source={require("../../assets/images/avatar-placeholder.png")}
+              style={styles.commentAvatar}
+            /> */}
+            <View style={styles.commentContent}>
+              <Text style={styles.commentAuthor}>Tô Nhật</Text>
+              <Text style={styles.commentText}>Kính này gọng gì vậy?</Text>
+              <Text style={styles.commentTime}>11 giờ trước • Phản hồi</Text>
+            </View>
+          </View>
+          <View style={styles.commentItem}>
+            {/* <Image
+              source={require("../../assets/images/avatar-placeholder.png")}
+              style={styles.commentAvatar}
+            /> */}
+            <View style={styles.commentContent}>
+              <Text style={styles.commentAuthor}>Tường An</Text>
+              <Text style={styles.commentText}>
+                Kính gọng kim loại, dẻo và bền lắm b
+              </Text>
+              <Text style={styles.commentTime}>10 giờ trước • Phản hồi</Text>
+            </View>
+          </View>
+
+          {/* Comment input */}
+          <View style={styles.commentInputContainer}>
+            {/* <Image
+              source={require("../../assets/images/avatar-placeholder.png")}
+              style={styles.commentAvatar}
+            /> */}
+            <TextInput
+              style={styles.commentTextInput}
+              placeholder="Nhập bình luận..."
+              placeholderTextColor="#999"
+            />
+          </View>
+        </View>
+      </View>
+    </ScrollView>
+  );
+}
 
 const styles = StyleSheet.create({
-  fullScreenContainer: {
-    flex: 1, // Chiếm toàn bộ màn hình
+  container: {
+    flex: 1,
     backgroundColor: "#fff",
   },
-  scrollView: {
-    flex: 1, // ScrollView cũng cần flex: 1 để tự cuộn
-  },
-  scrollViewContentContainer: {
-    paddingBottom: 80, // Điều chỉnh paddingBottom = chiều cao của bottomActionBar + khoảng trống
-  },
-  productImage: { width: "100%", height: 220, resizeMode: "cover" },
-  productInfo: { padding: 15 },
-  price: { fontSize: 22, fontWeight: "bold", color: "#2e5bff" },
-  title: { fontSize: 16, fontWeight: "600", marginTop: 5 },
-  descriptionBox: {
-    backgroundColor: "#f5f5f5",
-    padding: 15,
-    borderRadius: 10,
-    marginHorizontal: 15,
-    marginBottom: 10,
-  },
-  descriptionLine: { fontSize: 14, marginBottom: 5 },
-  sellerBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-  },
-  avatar: { width: 40, height: 40, borderRadius: 20 },
-  sellerInfo: { marginLeft: 10 },
-  sellerName: { fontWeight: "600", fontSize: 16 },
-  ratingRow: { flexDirection: "row", alignItems: "center", marginTop: 3 },
-  ratingText: { marginRight: 5 },
-  commentSection: { paddingHorizontal: 15, marginTop: 10 },
-  commentSectionTitle: { fontSize: 18, fontWeight: "bold", marginBottom: 10 },
-  commentListContainer: {
-    maxHeight: 300,
-    overflow: "hidden",
-    paddingBottom: 10,
-  },
-
-  // STYLES CHO BÌNH LUẬN VÀ PHẢN HỒI (giữ nguyên từ trước)
-  commentItemContainer: {
-    flexDirection: "row",
-    marginBottom: 10,
-    alignItems: "flex-start",
-  },
-  replyItemContainer: {
-    marginLeft: 40,
-    marginTop: 5,
-  },
-  commentAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    marginRight: 10,
-    marginTop: 5,
-  },
-  commentContentWrapper: {
+  centered: {
     flex: 1,
-  },
-  commentBubble: {
-    backgroundColor: "#f0f2f5",
-    borderRadius: 15,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginBottom: 5,
-    alignSelf: "flex-start",
-    maxWidth: "90%",
-  },
-  commentUserName: {
-    fontWeight: "bold",
-    fontSize: 14,
-    marginBottom: 2,
-  },
-  commentText: {
-    fontSize: 14,
-  },
-  replyButton: {
-    marginLeft: 10,
-  },
-  replyButtonText: {
-    color: "#888",
-    fontSize: 12,
-    fontWeight: "500",
-  },
-  replyInputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginLeft: 40,
-    marginTop: 5,
-    marginBottom: 10,
-    backgroundColor: "#f0f2f5",
-    borderRadius: 20,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-  },
-  replyTextInput: {
-    flex: 1,
-    paddingVertical: Platform.OS === "ios" ? 8 : 5,
-    fontSize: 14,
-  },
-
-  // STYLES MỚI CHO THANH HÀNH ĐỘNG CỐ ĐỊNH Ở DƯỚI ĐÁY
-  bottomActionBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-around", // Giãn đều các phần tử
-    position: "absolute", // Quan trọng: Đặt vị trí tuyệt đối
-    bottom: 0, // Dính vào đáy màn hình
-    left: 0,
-    right: 0,
-    backgroundColor: "#fff", // Màu nền cho thanh hành động
-    paddingVertical: 2,
-    paddingHorizontal: 5,
-    borderTopWidth: 1,
-    borderTopColor: "#eee",
-    height: 80, // Chiều cao cố định của thanh hành động
-    shadowColor: "#000", // Thêm shadow cho đẹp hơn
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 5, // Elevation cho Android
-    paddingBottom: 10,
-  },
-  favoriteButton: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: "#f5f5f5", // Màu nền nhẹ cho nút yêu thích
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 10,
+    backgroundColor: "#fff",
   },
-  addToCartButton: {
-    flex: 1, // Chiếm không gian còn lại
-    backgroundColor: "#323660", // Màu nền theo hình ảnh
-    borderRadius: 8,
-    paddingVertical: 12,
-    alignItems: "center",
-    marginRight: 10, // Khoảng cách giữa 2 nút
-  },
-  buyNowButton: {
-    flex: 1, // Chiếm không gian còn lại
-    backgroundColor: "#4472C4", // Màu nền theo hình ảnh
-    borderRadius: 8,
-    paddingVertical: 12,
-    alignItems: "center",
+  button: {
+    marginTop: 20,
+    backgroundColor: "#007bff",
+    padding: 10,
+    borderRadius: 5,
   },
   buttonText: {
     color: "#fff",
     fontSize: 16,
-    fontWeight: "600",
   },
-  mainCommentInputRowContainer: {
-    bottom: 5,
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingTop: 50,
+    paddingBottom: 10,
+    position: "absolute",
+    top: 0,
     left: 0,
     right: 0,
-    backgroundColor: "#fff",
+    zIndex: 10,
+  },
+  backButton: {
+    backgroundColor: "rgba(255,255,255,0.7)",
+    borderRadius: 20,
+    padding: 5,
+  },
+  shareButton: {
+    backgroundColor: "rgba(255,255,255,0.7)",
+    borderRadius: 20,
+    padding: 5,
+  },
+  imageSwiper: {
+    // Height set in component
+  },
+  slide: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#f2f2f2",
+  },
+  productImage: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover",
+  },
+  productImagePlaceholder: {
+    width: "100%",
+    height: width * 0.9,
+    backgroundColor: "#f0f0f0",
+  },
+  swiperDot: {
+    backgroundColor: "rgba(0,0,0,.2)",
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    margin: 3,
+  },
+  swiperActiveDot: {
+    backgroundColor: "#007bff",
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    margin: 3,
+  },
+  content: {
+    paddingHorizontal: 16,
+    paddingTop: 10,
+  },
+  priceTitleContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 5,
+  },
+  productPrice: {
+    fontSize: 26,
+    fontWeight: "bold",
+    color: "#e63946",
+  },
+  productTitle: {
+    fontSize: 22,
+    fontWeight: "600",
+    marginBottom: 15,
+    color: "#333",
+  },
+  descriptionContainer: {
+    marginBottom: 20,
     paddingVertical: 10,
     borderTopWidth: 1,
-    borderTopColor: "#eee",
+    borderTopColor: "#f0f0f0",
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0",
   },
-  mainCommentInputRow: {
+  descriptionText: {
+    fontSize: 15,
+    color: "#555",
+    lineHeight: 22,
+  },
+  // Style cho nút "Xem thêm"
+  readMoreButton: {
+    marginTop: 8,
+    alignSelf: "flex-start", // Đảm bảo nút không kéo dài hết chiều ngang
+  },
+  readMoreButtonText: {
+    color: "#007bff", // Màu xanh dương hoặc màu nhấn mạnh khác
+    fontSize: 14,
+    fontWeight: "bold",
+  },
+  attributesContainer: {
+    marginTop: 10,
+  },
+  attributeText: {
+    fontSize: 15,
+    color: "#555",
+    lineHeight: 22,
+  },
+  sellerContainer: {
     flexDirection: "row",
     alignItems: "center",
-    marginHorizontal: 15,
+    backgroundColor: "#f8f8f8",
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 20,
     borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 25,
-    paddingHorizontal: 15,
+    borderColor: "#eee",
   },
-  mainCommentInput: {
+  sellerAvatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    marginRight: 12,
+    backgroundColor: "#ccc",
+  },
+  sellerInfo: {
     flex: 1,
+  },
+  sellerNameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 2,
+  },
+  sellerName: {
+    fontSize: 17,
+    fontWeight: "bold",
+    marginRight: 5,
+    color: "#333",
+  },
+  verifiedIcon: {
+    // Styles for the checkmark icon
+  },
+  sellerRating: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  ratingText: {
+    fontSize: 13,
+    color: "#777",
+    marginRight: 5,
+  },
+  commentsSection: {
+    marginBottom: 30,
+  },
+  commentsTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    marginBottom: 15,
+    color: "#333",
+  },
+  commentItem: {
+    flexDirection: "row",
+    marginBottom: 15,
+    alignItems: "flex-start",
+  },
+  commentAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 10,
+    backgroundColor: "#ccc",
+  },
+  commentContent: {
+    flex: 1,
+    backgroundColor: "#f2f2f2",
+    borderRadius: 10,
+    padding: 10,
+  },
+  commentAuthor: {
+    fontWeight: "bold",
+    marginBottom: 2,
+  },
+  commentText: {
+    fontSize: 14,
+    color: "#333",
+  },
+  commentTime: {
+    fontSize: 12,
+    color: "#888",
+    marginTop: 5,
+  },
+  commentInputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#eee",
+    paddingTop: 15,
+  },
+  commentTextInput: {
+    flex: 1,
+    backgroundColor: "#f8f8f8",
+    borderRadius: 25,
     paddingVertical: 10,
+    paddingHorizontal: 15,
+    marginLeft: 10,
+    fontSize: 15,
   },
 });
