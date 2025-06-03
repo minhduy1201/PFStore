@@ -7,16 +7,18 @@ import {
   ScrollView,
   Image,
   TouchableOpacity,
-  ActivityIndicator, // Để hiển thị trạng thái tải
+  ActivityIndicator,
   Alert,
   Dimensions,
+  Platform,
+  KeyboardAvoidingView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Swiper from "react-native-swiper"; // Để tạo carousel ảnh
 import { getProductById } from "../servers/ProductService"; // Import hàm mới
 
 const { width } = Dimensions.get("window");
-//số dòng tối đa cho mô tả
+
 const MAX_DESCRIPTION_LINES = 3;
 
 export default function ProductDetail({ route, navigation }) {
@@ -25,6 +27,7 @@ export default function ProductDetail({ route, navigation }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [showFullDescription, setShowFullDescription] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
 
   useEffect(() => {
     const loadProductDetail = async () => {
@@ -97,182 +100,193 @@ export default function ProductDetail({ route, navigation }) {
     : descriptionLines.slice(0, MAX_DESCRIPTION_LINES);
 
   return (
-    <ScrollView style={styles.container}>
-      {/*Nút trở về */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.backButton}
-        >
-          <Ionicons name="arrow-back" size={24} color="black" />
-        </TouchableOpacity>
-      </View>
-
-      {/* Product Image Carousel */}
-      {product.images && product.images.length > 0 ? (
-        <Swiper
-          style={styles.imageSwiper}
-          height={width * 0.9} // Chiều cao ảnh gần bằng chiều rộng màn hình để tạo hình vuông
-          showsButtons={false}
-          dotStyle={styles.swiperDot}
-          activeDotStyle={styles.swiperActiveDot}
-        >
-          {product.images.map((imageUri, index) => (
-            <View key={index} style={styles.slide}>
-              <Image
-                source={{ uri: imageUri }}
-                style={styles.productImage}
-                resizeMode="cover"
-              />
-            </View>
-          ))}
-        </Swiper>
-      ) : (
-        <Image
-          source={require("../../assets/images/icon.png")} // Thêm ảnh placeholder nếu không có ảnh
-          style={styles.productImagePlaceholder}
-          resizeMode="contain"
-        />
-      )}
-
-      <View style={styles.content}>
-        {/* Tiêu đề và giá */}
-        <View style={styles.priceTitleContainer}>
-          <Text style={styles.productPrice}>{formatPrice(product.price)}</Text>
-          {/* Nút chia sẻ nằm ở đây theo mockup ban đầu */}
-          <TouchableOpacity>
-            <Ionicons name="share-social-outline" size={24} color="#666" />
+    // Dùng View bọc ngoài để chứa ScrollView và thanh action cố định
+    <KeyboardAvoidingView
+      style={styles.fullScreenContainer} // Đặt flex: 1 ở đây
+      behavior={Platform.OS ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+    >
+      <ScrollView style={styles.container}>
+        {/* Header with back button */}
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}
+          >
+            <Ionicons name="arrow-back" size={24} color="black" />
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.productTitle}>{product.title}</Text>
-
-        {/* Description */}
-        <View style={styles.descriptionContainer}>
-          {displayedDescriptionLines.length > 0 ? (
-            displayedDescriptionLines.map((line, index) => (
-              <Text key={index} style={styles.descriptionText}>
-                • {line.trim()}
-              </Text>
-            ))
-          ) : (
-            <Text style={styles.descriptionText}>Không có mô tả chi tiết.</Text>
-          )}
-
-          {needsReadMore && (
-            <TouchableOpacity
-              onPress={() => setShowFullDescription(!showFullDescription)}
-              style={styles.readMoreButton}
-            >
-              <Text style={styles.readMoreButtonText}>
-                {showFullDescription ? "Thu gọn" : "Xem thêm"}
-              </Text>
-            </TouchableOpacity>
-          )}
-
-          {product.attributes && product.attributes.length > 0 && (
-            <View style={styles.attributesContainer}>
-              {product.attributes.map((attr, index) => (
-                <Text key={index} style={styles.attributeText}>
-                  • {attr.attributeName}: {attr.value}
-                </Text>
-              ))}
-            </View>
-          )}
-        </View>
-
-        {/* Thông tin người bán */}
-        {product.seller && (
-          <TouchableOpacity style={styles.sellerContainer}>
-            <Image
-              source={require("../../assets/images/logo.jpg")} // Thay thế bằng ảnh đại diện người bán nếu có
-              style={styles.sellerAvatar}
-            />
-            <View style={styles.sellerInfo}>
-              <View style={styles.sellerNameRow}>
-                <Text style={styles.sellerName}>{product.seller.fullName}</Text>
-                {product.seller.isVerified && (
-                  <Ionicons
-                    name="checkmark-circle"
-                    size={18}
-                    color="#4CAF50"
-                    style={styles.verifiedIcon}
-                  />
-                )}
+        {/* Product Image Carousel */}
+        {product.images && product.images.length > 0 ? (
+          <Swiper
+            style={styles.imageSwiper}
+            height={width * 0.9}
+            showsButtons={false}
+            dotStyle={styles.swiperDot}
+            activeDotStyle={styles.swiperActiveDot}
+          >
+            {product.images.map((imageUri, index) => (
+              <View key={index} style={styles.slide}>
+                <Image
+                  source={{ uri: imageUri }}
+                  style={styles.productImage}
+                  resizeMode="cover"
+                />
               </View>
-              <View style={styles.sellerRating}>
-                <Text style={styles.ratingText}>4.0</Text>{" "}
-                {/* Hardcoded for now, ideal to fetch from API */}
-                {[...Array(5)].map((_, i) => (
-                  <Ionicons
-                    key={i}
-                    name={i < 4 ? "star" : "star-outline"} // Assuming 4 stars for now
-                    size={16}
-                    color="#FFD700"
-                  />
-                ))}
-                <Text style={styles.ratingText}>
-                  {" "}
-                  ({product.seller.productCount || 10} sản phẩm đã bán)
-                </Text>
-              </View>
-            </View>
-            <Ionicons name="chevron-forward" size={24} color="#ccc" />
-          </TouchableOpacity>
+            ))}
+          </Swiper>
+        ) : (
+          <Image
+            source={require("../../assets/images/icon.png")}
+            style={styles.productImagePlaceholder}
+            resizeMode="contain"
+          />
         )}
 
-        {/* Comments Section */}
-        <View style={styles.commentsSection}>
-          <Text style={styles.commentsTitle}>Bình luận</Text>
-          {/* Example comments - you'd map over actual comment data */}
-          <View style={styles.commentItem}>
-            {/* Nếu có avatar người comment, uncomment dòng dưới */}
-            {/* <Image
-              source={require("../../assets/images/avatar-placeholder.png")}
-              style={styles.commentAvatar}
-            /> */}
-            <View style={styles.commentContent}>
-              <Text style={styles.commentAuthor}>Tô Nhật</Text>
-              <Text style={styles.commentText}>Kính này gọng gì vậy?</Text>
-              <Text style={styles.commentTime}>11 giờ trước • Phản hồi</Text>
-            </View>
+        <View style={styles.content}>
+          {/* Tiêu đề và giá */}
+          <View style={styles.priceTitleContainer}>
+            <Text style={styles.productPrice}>
+              {formatPrice(product.price)}
+            </Text>
+            <TouchableOpacity>
+              <Ionicons name="share-social-outline" size={24} color="#666" />
+            </TouchableOpacity>
           </View>
-          <View style={styles.commentItem}>
-            {/* <Image
-              source={require("../../assets/images/avatar-placeholder.png")}
-              style={styles.commentAvatar}
-            /> */}
-            <View style={styles.commentContent}>
-              <Text style={styles.commentAuthor}>Tường An</Text>
-              <Text style={styles.commentText}>
-                Kính gọng kim loại, dẻo và bền lắm b
+          <Text style={styles.productTitle}>{product.title}</Text>
+          {/* Description */}
+          <View style={styles.descriptionContainer}>
+            {displayedDescriptionLines.length > 0 ? (
+              displayedDescriptionLines.map((line, index) => (
+                <Text key={index} style={styles.descriptionText}>
+                  • {line.trim()}
+                </Text>
+              ))
+            ) : (
+              <Text style={styles.descriptionText}>
+                Không có mô tả chi tiết.
               </Text>
-              <Text style={styles.commentTime}>10 giờ trước • Phản hồi</Text>
+            )}
+
+            {needsReadMore && (
+              <TouchableOpacity
+                onPress={() => setShowFullDescription(!showFullDescription)}
+                style={styles.readMoreButton}
+              >
+                <Text style={styles.readMoreButtonText}>
+                  {showFullDescription ? "Thu gọn" : "Xem thêm"}
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            {product.attributes && product.attributes.length > 0 && (
+              <View style={styles.attributesContainer}>
+                {product.attributes.map((attr, index) => (
+                  <Text key={index} style={styles.attributeText}>
+                    • {attr.attributeName}: {attr.value}
+                  </Text>
+                ))}
+              </View>
+            )}
+          </View>
+          {/* Thông tin người bán */}
+          {product.seller && (
+            <TouchableOpacity style={styles.sellerContainer}>
+              <Image
+                source={require("../../assets/images/logo.jpg")}
+                style={styles.sellerAvatar}
+              />
+              <View style={styles.sellerInfo}>
+                <View style={styles.sellerNameRow}>
+                  <Text style={styles.sellerName}>
+                    {product.seller.fullName}
+                  </Text>
+                  {product.seller.isVerified && (
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={18}
+                      color="#4CAF50"
+                      style={styles.verifiedIcon}
+                    />
+                  )}
+                </View>
+                <View style={styles.sellerRating}>
+                  <Text style={styles.ratingText}>4.0</Text>
+                  {[...Array(5)].map((_, i) => (
+                    <Ionicons
+                      key={i}
+                      name={i < 4 ? "star" : "star-outline"}
+                      size={16}
+                      color="#FFD700"
+                    />
+                  ))}
+                  <Text style={styles.ratingText}>
+                    ({product.seller.productCount || 10} sản phẩm đã bán)
+                  </Text>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={24} color="#ccc" />
+            </TouchableOpacity>
+          )}
+          {/* Comments Section */}
+          <View style={styles.commentsSection}>
+            <Text style={styles.commentsTitle}>Bình luận</Text>
+            {/* Example comments */}
+            <View style={styles.commentItem}>
+              <View style={styles.commentContent}>
+                <Text style={styles.commentAuthor}>Tô Nhật</Text>
+                <Text style={styles.commentText}>Kính này gọng gì vậy?</Text>
+                <Text style={styles.commentTime}>11 giờ trước • Phản hồi</Text>
+              </View>
+            </View>
+            <View style={styles.commentItem}>
+              <View style={styles.commentContent}>
+                <Text style={styles.commentAuthor}>Tường An</Text>
+                <Text style={styles.commentText}>
+                  Kính gọng kim loại, dẻo và bền lắm b
+                </Text>
+                <Text style={styles.commentTime}>10 giờ trước • Phản hồi</Text>
+              </View>
+            </View>
+
+            {/* Comment input */}
+            <View style={styles.commentInputContainer}>
+              <TextInput
+                style={styles.commentTextInput}
+                placeholder="Nhập bình luận..."
+                placeholderTextColor="#999"
+              />
             </View>
           </View>
-
-          {/* Comment input */}
-          <View style={styles.commentInputContainer}>
-            {/* <Image
-              source={require("../../assets/images/avatar-placeholder.png")}
-              style={styles.commentAvatar}
-            /> */}
-            <TextInput
-              style={styles.commentTextInput}
-              placeholder="Nhập bình luận..."
-              placeholderTextColor="#999"
-            />
-          </View>
+          {/* Đảm bảo có đủ padding ở cuối ScrollView để không bị che bởi thanh action */}
+          <View style={{ height: 100 }} /> {/* Padding dưới cùng */}
         </View>
+      </ScrollView>
+
+      {/* Thanh action cố định ở dưới cùng */}
+      <View style={styles.bottomActionContainer}>
+        <TouchableOpacity style={styles.favoriteButton}>
+          <Ionicons name="heart-outline" size={28} color="#666" />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.addToCartButton}>
+          <Text style={styles.buttonText}>Thêm vào giỏ</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.buyNowButton}>
+          <Text style={styles.buttonText}>Mua ngay</Text>
+        </TouchableOpacity>
       </View>
-    </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  fullScreenContainer: {
+    flex: 1, // Đảm bảo container này chiếm toàn bộ màn hình
     backgroundColor: "#fff",
+  },
+  container: {
+    flex: 1, // ScrollView chiếm phần còn lại của màn hình
   },
   centered: {
     flex: 1,
@@ -289,10 +303,11 @@ const styles = StyleSheet.create({
   buttonText: {
     color: "#fff",
     fontSize: 16,
+    fontWeight: "bold", // Thêm fontWeight để giống hình ảnh
   },
   header: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    justifyContent: "flex-start", // Chỉ có nút back nên căn trái
     alignItems: "center",
     paddingHorizontal: 16,
     paddingTop: 50,
@@ -380,13 +395,12 @@ const styles = StyleSheet.create({
     color: "#555",
     lineHeight: 22,
   },
-  // Style cho nút "Xem thêm"
   readMoreButton: {
     marginTop: 8,
-    alignSelf: "flex-start", // Đảm bảo nút không kéo dài hết chiều ngang
+    alignSelf: "flex-start",
   },
   readMoreButtonText: {
-    color: "#007bff", // Màu xanh dương hoặc màu nhấn mạnh khác
+    color: "#007bff",
     fontSize: 14,
     fontWeight: "bold",
   },
@@ -497,5 +511,53 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     marginLeft: 10,
     fontSize: 15,
+  },
+  // START: Styles mới cho thanh action cố định
+  bottomActionContainer: {
+    position: "absolute", // Quan trọng: Đặt nó cố định
+    bottom: 0, // Đặt ở cuối màn hình
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-around", // Căn đều các nút
+    backgroundColor: "#fff", // Nền trắng
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderTopWidth: 1,
+    borderTopColor: "#eee",
+    shadowColor: "#000", // Thêm bóng đổ cho đẹp mắt
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 10, // Shadow cho Android
+    paddingBottom: Platform.OS === "ios" ? 20 : 10,
+  },
+  favoriteButton: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    borderWidth: 1,
+    borderColor: "#ccc",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 10,
+  },
+  addToCartButton: {
+    flex: 1, // Cho phép nút này co giãn
+    backgroundColor: "#3a3f5a", // Màu từ hình ảnh
+    paddingVertical: 12,
+    borderRadius: 25,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 10,
+  },
+  buyNowButton: {
+    flex: 1, // Cho phép nút này co giãn
+    backgroundColor: "#4c8bf5", // Màu xanh dương từ hình ảnh
+    paddingVertical: 12,
+    borderRadius: 25,
+    justifyContent: "center",
+    alignItems: "center",
   },
 });

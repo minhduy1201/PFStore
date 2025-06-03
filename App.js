@@ -28,6 +28,7 @@ import ActivityScreen from "./src/screens/ActivityScreen";
 import TransactionHistoryScreen from "./src/screens/TransactionHistoryScreen";
 
 import EditProfileScreen from "./src/screens/EditProfileScreen";
+import ProductByCategory from "./src/screens/ProductByCategory";
 
 // import SettingsScreen from './src/screens/Settings/SettingsScreen';
 
@@ -42,9 +43,18 @@ function OrdersStackScreen() {
       <OrdersStack.Screen name="Checkout" component={CheckoutScreen} />
       <OrdersStack.Screen name="OrderDetails" component={OrderDetailsScreen} />
       <OrdersStack.Screen name="ManageOrders" component={ManageOrdersScreen} />
-      <OrdersStack.Screen name="FailedDeliveryDetails" component={FailedDeliveryDetailsScreen} />
-      <OrdersStack.Screen name="SuccessfulDeliveryDetails" component={SuccessfulDeliveryDetailsScreen} />
-      <OrdersStack.Screen name="TransactionHistory" component={ActivityScreen} />
+      <OrdersStack.Screen
+        name="FailedDeliveryDetails"
+        component={FailedDeliveryDetailsScreen}
+      />
+      <OrdersStack.Screen
+        name="SuccessfulDeliveryDetails"
+        component={SuccessfulDeliveryDetailsScreen}
+      />
+      <OrdersStack.Screen
+        name="TransactionHistory"
+        component={ActivityScreen}
+      />
     </OrdersStack.Navigator>
   );
 }
@@ -105,7 +115,6 @@ function MainTabs() {
       <Tab.Screen name="Post" component={PostsScreen} />
       <Tab.Screen name="Orders" component={OrdersStackScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
-      
     </Tab.Navigator>
   );
 }
@@ -124,16 +133,25 @@ export default function App() {
         <Stack.Screen name="Main" component={MainTabs} />
         <Stack.Screen name="ProductDetail" component={ProductDetail} />
         <Stack.Screen name="AppInfo" component={AppInfoScreen} />
+        <Stack.Screen name="ProductByCat" component={ProductByCategory} />
 
         <Stack.Screen name="OrderDetails" component={OrderDetailsScreen} />
         <Stack.Screen name="ManageOrders" component={ManageOrdersScreen} />
-        <Stack.Screen name="FailedDeliveryDetails" component={FailedDeliveryDetailsScreen} />
-        <Stack.Screen name="SuccessfulDeliveryDetails" component={SuccessfulDeliveryDetailsScreen} />
+        <Stack.Screen
+          name="FailedDeliveryDetails"
+          component={FailedDeliveryDetailsScreen}
+        />
+        <Stack.Screen
+          name="SuccessfulDeliveryDetails"
+          component={SuccessfulDeliveryDetailsScreen}
+        />
         <Stack.Screen name="Activity" component={ActivityScreen} />
-        <Stack.Screen name="TransactionHistory" component={TransactionHistoryScreen} />
+        <Stack.Screen
+          name="TransactionHistory"
+          component={TransactionHistoryScreen}
+        />
 
         <Stack.Screen name="EditProfile" component={EditProfileScreen} />
-
       </Stack.Navigator>
     </NavigationContainer>
   );

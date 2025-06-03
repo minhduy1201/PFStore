@@ -35,6 +35,17 @@ export const getProductById = async (productId) => {
   }
 };
 
+//Lấy sản phẩm theo catrgoryId
+export const getProductByCatId = async (categoryId) => {
+  try {
+    const res = await api.get(`/Products/category/${categoryId}`);
+    return res.data;
+  } catch (err) {
+    handleApiError(err, "Lỗi khi lấy sản phẩm theo danh mục sản phẩm");
+    return null;
+  }
+};
+
 // --- Dữ liệu giả lập cho danh sách sản phẩm của người dùng ---
 const MOCK_USER_POSTS_DATA = [
   {
