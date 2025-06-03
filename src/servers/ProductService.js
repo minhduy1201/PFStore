@@ -1,3 +1,4 @@
+import { get } from "react-native/Libraries/TurboModule/TurboModuleRegistry";
 import { api, handleApiError } from "./connection";
 
 //Lấy danh sách các danh mục
@@ -17,7 +18,19 @@ export const getProducts = async () => {
     const response = await api.get("/Products");
     return response.data;
   } catch (error) {
-    handleApiError(error, "Lỗi khi lấy danh sách sản phẩm");
+    handleApiError(error, "Lỗi khi  danh sách sản phẩm");
+    return null;
+  }
+};
+
+//Lấy sản phẩm theo id
+export const getProductById = async (productId) => {
+  try {
+    console.log("Đang lây sản phẩm từ Product");
+    const res = await api.get(`/Products/${productId}`);
+    return res.data;
+  } catch (err) {
+    handleApiError(err, "Lỗi khi lây sản phẩm theo Id");
     return null;
   }
 };
