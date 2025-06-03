@@ -1,54 +1,145 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { Logout } from '../servers/connection';
+import React from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  Alert,
+} from "react-native";
+import { MaterialIcons } from "@expo/vector-icons"; // Sử dụng MaterialIcons cho mũi tên
+import { Logout } from "../servers/connection";
 
-export default function ProfileScreen({ navigation }) {
-  const handleLogout = () => {
-    Logout(navigation);
+const ProfileScreen = ({ navigation }) => {
+  // Hàm xử lý khi nhấn vào một mục menu
+  const handlePress = (screenName) => {
+    navigation.navigate(screenName);
   };
+
+  //Hàm đăng xuất
+
   return (
-   <View style={styles.container}>
-         <TouchableOpacity
-           style={styles.button}
-           onPress={() => {
-            handleLogout();
-           }}
-         >
-           <Text style={styles.buttonText}>Đăng xuất</Text>
-         </TouchableOpacity>
-       </View>
+    <ScrollView style={styles.container}>
+      {/* Tiêu đề trang */}
+      <Text style={styles.header}>Cài đặt</Text>
+
+      {/* Nhóm "Thông tin cá nhân" */}
+      <Text style={styles.sectionTitle}>Thông tin cá nhân</Text>
+      <View style={styles.section}>
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={() => handlePress("EditProfile")}
+        >
+          <Text style={styles.menuItemText}>Chỉnh sửa hồ sơ</Text>
+          <MaterialIcons name="keyboard-arrow-right" size={24} color="#555" />
+        </TouchableOpacity>
+        <View style={styles.separator} /> {/* Đường kẻ phân cách */}
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={() => handlePress("PaymentMethodScreen")}
+        >
+          <Text style={styles.menuItemText}>Phương thức thanh toán</Text>
+          <MaterialIcons name="keyboard-arrow-right" size={24} color="#555" />
+        </TouchableOpacity>
+      </View>
+
+      {/* Nhóm "Ứng Dụng" */}
+      <Text style={styles.sectionTitle}>Ứng Dụng</Text>
+      <View style={styles.section}>
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={() => handlePress("TransactionHistory")}
+        >
+          <Text style={styles.menuItemText}>Lịch sử giao dịch</Text>
+          <MaterialIcons name="keyboard-arrow-right" size={24} color="#555" />
+        </TouchableOpacity>
+        <View style={styles.separator} />
+
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={() => handlePress("ManageOrders")}
+        >
+          <Text style={styles.menuItemText}>Quản lý đơn hàng</Text>
+          <MaterialIcons name="keyboard-arrow-right" size={24} color="#555" />
+        </TouchableOpacity>
+        <View style={styles.separator} />
+
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={() => handlePress("AppInfo")}
+        >
+          <Text style={styles.menuItemText}>Thông tin ứng dụng</Text>
+          <MaterialIcons name="keyboard-arrow-right" size={24} color="#555" />
+        </TouchableOpacity>
+      </View>
+
+      {/* Nút Đăng xuất */}
+      <TouchableOpacity style={styles.logoutButton} onPress={Logout}>
+        <Text style={styles.logoutButtonText}>Đăng xuất</Text>
+      </TouchableOpacity>
+    </ScrollView>
   );
-}
+};
 
 const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      padding: 20,
-    },
-    title: {
-      fontSize: 24,
-      fontWeight: 'bold',
-      marginBottom: 10,
-    },
-    subtitle: {
-      fontSize: 16,
-      color: '#777',
-      textAlign: 'center',
-      marginBottom: 20,
-    },
-    button: {
-      backgroundColor: '#007BFF',
-      padding: 10,
-      borderRadius: 5,
-      width: '100%',
-      marginBottom: 15,
-      alignItems: 'center',
-    },
-    buttonText: {
-      color: '#fff',
-      fontSize: 16,
-    },
-  });
-  
+  container: {
+    flex: 1,
+    backgroundColor: "#f8f8f8", // Màu nền nhẹ cho toàn bộ màn hình
+    paddingTop: 80, // Khoảng cách từ đầu màn hình
+  },
+  header: {
+    fontSize: 28,
+    fontWeight: "bold",
+    marginHorizontal: 20,
+    marginBottom: 30,
+    color: "#333",
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#666",
+    marginHorizontal: 20,
+    marginTop: 15,
+    marginBottom: 10,
+  },
+  section: {
+    backgroundColor: "#fff",
+    marginHorizontal: 15,
+    borderRadius: 10,
+    overflow: "hidden", // Đảm bảo đường kẻ nằm gọn trong border radius
+    shadowRadius: 3,
+    elevation: 3, // Elevation cho Android
+    marginBottom: 20,
+  },
+  menuItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    backgroundColor: "#fff",
+  },
+  menuItemText: {
+    fontSize: 16,
+    color: "#333",
+  },
+  separator: {
+    height: 1,
+    backgroundColor: "#f0f0f0", // Màu đường kẻ mờ
+    marginHorizontal: 20, // Không kéo dài hết chiều rộng để tạo hiệu ứng đẹp hơn
+  },
+  logoutButton: {
+    backgroundColor: "transparent", // Nút đăng xuất không có nền
+    alignItems: "flex-start", // Căn trái như hình
+    marginHorizontal: 20,
+    marginTop: 20,
+    marginBottom: 40, // Khoảng trống ở cuối trang
+  },
+  logoutButtonText: {
+    fontSize: 16,
+    color: "red", // Chữ màu đỏ
+    fontWeight: "500",
+  },
+});
+
+export default ProfileScreen;
