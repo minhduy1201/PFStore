@@ -48,7 +48,7 @@ const ProfileScreen = ({ navigation }) => {
       <View style={styles.section}>
         <TouchableOpacity
           style={styles.menuItem}
-          onPress={() => handlePress("TransactionHistoryScreen")}
+          onPress={() => handlePress("TransactionHistory")}
         >
           <Text style={styles.menuItemText}>Lịch sử giao dịch</Text>
           <MaterialIcons name="keyboard-arrow-right" size={24} color="#555" />
@@ -57,7 +57,7 @@ const ProfileScreen = ({ navigation }) => {
 
         <TouchableOpacity
           style={styles.menuItem}
-          onPress={() => handlePress("ManageShipmentScreen")}
+          onPress={() => handlePress("ManageOrders")}
         >
           <Text style={styles.menuItemText}>Quản lý đơn hàng</Text>
           <MaterialIcons name="keyboard-arrow-right" size={24} color="#555" />

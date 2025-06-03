@@ -17,11 +17,37 @@ import PostsScreen from "./src/screens/PostsScreen";
 import OrdersScreen from "./src/screens/OrdersScreen";
 import ProductDetail from "./src/screens/ProductDetail";
 import AppInfoScreen from "./src/screens/AppInfoScreen";
+
+import CartScreen from "./src/screens/CartScreen";
+import CheckoutScreen from "./src/screens/CheckoutScreen";
+import OrderDetailsScreen from "./src/screens/OrderDetailsScreen";
+import ManageOrdersScreen from "./src/screens/ManageOrdersScreen";
+import FailedDeliveryDetailsScreen from "./src/screens/FailedDeliveryDetailsScreen";
+import SuccessfulDeliveryDetailsScreen from "./src/screens/SuccessfulDeliveryDetailsScreen";
+import ActivityScreen from "./src/screens/ActivityScreen";
+import TransactionHistoryScreen from "./src/screens/TransactionHistoryScreen";
+
 import EditProfileScreen from "./src/screens/EditProfileScreen";
+
 // import SettingsScreen from './src/screens/Settings/SettingsScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
+const OrdersStack = createNativeStackNavigator(); // New Stack Navigator for Orders flow
+
+function OrdersStackScreen() {
+  return (
+    <OrdersStack.Navigator screenOptions={{ headerShown: false }}>
+      <OrdersStack.Screen name="Cart" component={CartScreen} />
+      <OrdersStack.Screen name="Checkout" component={CheckoutScreen} />
+      <OrdersStack.Screen name="OrderDetails" component={OrderDetailsScreen} />
+      <OrdersStack.Screen name="ManageOrders" component={ManageOrdersScreen} />
+      <OrdersStack.Screen name="FailedDeliveryDetails" component={FailedDeliveryDetailsScreen} />
+      <OrdersStack.Screen name="SuccessfulDeliveryDetails" component={SuccessfulDeliveryDetailsScreen} />
+      <OrdersStack.Screen name="TransactionHistory" component={ActivityScreen} />
+    </OrdersStack.Navigator>
+  );
+}
 
 function MainTabs() {
   return (
@@ -43,7 +69,7 @@ function MainTabs() {
               iconName = focused ? "reader" : "reader-outline";
               break;
             case "Orders":
-              iconName = focused ? "bag" : "bag-outline";
+              iconName = focused ? "cart" : "cart-outline";
               break;
             case "Profile":
               iconName = focused ? "person" : "person-outline";
@@ -77,8 +103,9 @@ function MainTabs() {
       <Tab.Screen name="Home" component={HomeScreen} />
       <Tab.Screen name="Wishlist" component={WishlistScreen} />
       <Tab.Screen name="Post" component={PostsScreen} />
-      <Tab.Screen name="Orders" component={OrdersScreen} />
+      <Tab.Screen name="Orders" component={OrdersStackScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
+      
     </Tab.Navigator>
   );
 }
@@ -97,7 +124,16 @@ export default function App() {
         <Stack.Screen name="Main" component={MainTabs} />
         <Stack.Screen name="ProductDetail" component={ProductDetail} />
         <Stack.Screen name="AppInfo" component={AppInfoScreen} />
+
+        <Stack.Screen name="OrderDetails" component={OrderDetailsScreen} />
+        <Stack.Screen name="ManageOrders" component={ManageOrdersScreen} />
+        <Stack.Screen name="FailedDeliveryDetails" component={FailedDeliveryDetailsScreen} />
+        <Stack.Screen name="SuccessfulDeliveryDetails" component={SuccessfulDeliveryDetailsScreen} />
+        <Stack.Screen name="Activity" component={ActivityScreen} />
+        <Stack.Screen name="TransactionHistory" component={TransactionHistoryScreen} />
+
         <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+
       </Stack.Navigator>
     </NavigationContainer>
   );
