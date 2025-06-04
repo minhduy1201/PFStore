@@ -10,37 +10,34 @@ export default function HomeScreen({ navigation }) {
   useEffect(() => {
     const checkLoginStatus = async () => {
       try {
-        const token = await AsyncStorage.getItem('token'); // lưu token riêng nếu cần
-        const user = await AsyncStorage.getItem('user');
+        const token = await AsyncStorage.getItem("token");
+        const user = await AsyncStorage.getItem("user");
         if (!token || !user) {
-          // Nếu không có token hoặc user thì quay lại Login
-          navigation.replace('Login');
+          navigation.replace("Login");
         }
       } catch (error) {
-        Alert.alert('Lỗi', 'Không thể xác thực phiên đăng nhập');
-        navigation.replace('Login');
+        Alert.alert("Lỗi", "Không thể xác thực phiên đăng nhập");
+        navigation.replace("Login");
       }
     };
 
     checkLoginStatus();
   }, []);
 
-   // Load danh mục
-   useEffect(() => {
+  useEffect(() => {
     const loadCategories = async () => {
       try {
         const res = await GetCategories();
         if (res && Array.isArray(res)) {
           setCategories(res);
         } else {
-          Alert.alert('Lỗi', 'Không thể tải danh mục sản phẩm');
+          Alert.alert("Lỗi", "Không thể tải danh mục sản phẩm");
         }
       } catch (error) {
-        Alert.alert('Lỗi', 'Đã xảy ra lỗi khi tải danh mục');
-        console.log('Load category error:', error);
+        Alert.alert("Lỗi", "Đã xảy ra lỗi khi tải danh mục");
+        console.log("Load category error:", error);
       }
     };
-
     loadCategories();
   }, []);
   return (
@@ -55,18 +52,17 @@ export default function HomeScreen({ navigation }) {
   <TextInput style={styles.searchInput} placeholder="Tìm kiếm sản phẩm" />
 </View>
 
-
-      {/* Banner khuyến mãi */}
+      {/* Promotion Banner */}
       <View style={styles.banner}>
         <Image
-          source={require('../../assets/images/banner.png')}
+          source={require("../../assets/images/banner.png")}
           style={styles.bannerImage}
           resizeMode="cover"
         />
       </View>
 
-           {/* Danh Mục */}
-           <View style={styles.section}>
+      {/* Categories */}
+      <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Danh Mục</Text>
           <TouchableOpacity>
@@ -74,103 +70,205 @@ export default function HomeScreen({ navigation }) {
           </TouchableOpacity>
         </View>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-    <View style={styles.categories}>
-      {categories.map((cat, index) => (
-        <View key={index} style={styles.categoryItem}>
-          <Text style={styles.categoryText}>{cat.name}</Text>
-        </View>
-      ))}
-    </View>
-  </ScrollView>
-        </View>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.categoriesScrollContainer}
+        >
+          {categories.map((cat) => (
+            <TouchableOpacity
+              key={cat.categoryId.toString()}
+              style={styles.categoryItem}
+              onPress={() =>
+                navigation.navigate("ProductByCat", {
+                  categoryId: cat.categoryId,
+                  categoryName: cat.name,
+                })
+              }
+            >
+              <Text style={styles.categoryText}>{cat.name}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
 
-      {/* Mới Nhất */}
+      {/* Products */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Mới Nhất</Text>
+          <Text style={styles.sectionTitle}>Sản phẩm</Text>
           <TouchableOpacity>
             <Ionicons name="chevron-forward" size={20} />
           </TouchableOpacity>
         </View>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {[1, 2, 3].map((_, index) => (
-            <View key={index} style={styles.productCard}>
-              <Image
-                source={require('../../assets/images/demo.jpg')} // Đổi ảnh
-                style={styles.productImage}
-              />
-              <Text style={styles.productTitle}>Sản phẩm {index + 1}</Text>
-              <Text style={styles.productPrice}>160.000đ</Text>
-            </View>
+        {/* This is the new container for vertical, two-column product display */}
+        <View style={styles.productsGridContainer}>
+          {products.map((prod, index) => (
+            <TouchableOpacity
+              key={index}
+              style={styles.productCard}
+              onPress={() =>
+                navigation.navigate("ProductDetail", {
+                  productId: prod.productId,
+                })
+              }
+            >
+              {prod.productImages && prod.productImages.length > 0 && (
+                <Image
+                  source={{ uri: prod.productImages[0].imageUrl }}
+                  style={styles.productImage}
+                />
+              )}
+              <View style={styles.productInfo}>
+                <Text style={styles.productTitle}>{prod.title}</Text>
+                <Text style={styles.productPrice}>
+                  {prod.price.toLocaleString("vi-VN")} VNĐ
+                </Text>
+              </View>
+            </TouchableOpacity>
           ))}
-        </ScrollView>
+        </View>
       </View>
+
+    {/* Popup lọc sản phẩm */}
+    {showFilter && (
+        <Modal
+          transparent={true}
+          animationType="slide"
+          visible={showFilter}
+          onRequestClose={toggleFilter}>
+          <TouchableWithoutFeedback onPress={() => setShowFilter(false)}>
+            <View style={styles.overlay}></View>
+          </TouchableWithoutFeedback>
+          <View style={styles.filterContainer}>
+            <View style={styles.filterContent}>
+                <Text style={styles.filterTitle}>Lọc Sản Phẩm</Text>
+
+                {/* Thương hiệu */}
+                <Text style={styles.filterLabel}>Thương hiệu</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                                <View style={styles.categories}>
+                                    {categories.map((cat, index) => (
+                                        <TouchableOpacity
+                                            key={index}
+                                            style={[styles.categoryItem, selectedBrands.includes(cat.name) && styles.selectedCategory]}
+                                            onPress={() => toggleBrandSelection(cat.name)}>
+                                            <Text style={styles.categoryText}>{cat.name}</Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+                            </ScrollView>
+
+                {/* Size */}
+                <Text style={styles.filterLabel}>Size</Text>
+                <View style={styles.categories}>
+                                {['XS', 'S', 'M', 'L', 'XL', '2XL'].map((sizeOption, index) => (
+                                    <TouchableOpacity
+                                        key={index}
+                                        style={[styles.categoryItem, selectedSizes.includes(sizeOption) && styles.selectedCategory]}
+                                        onPress={() => toggleSizeSelection(sizeOption)}>
+                                        <Text style={styles.categoryText}>{sizeOption}</Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+
+                {/* Giá */}
+                <Text style={styles.filterLabel}>Giá</Text>
+                <View style={styles.priceContainer}>
+                   <TextInput
+                       style={styles.filterInput}
+                       value={minPrice}
+                       onChangeText={setMinPrice}
+                       placeholder="Giá tối thiểu"
+                       keyboardType="numeric"
+                    />
+                    <TextInput
+                       style={styles.filterInput}
+                       value={maxPrice}
+                       onChangeText={setMaxPrice}
+                       placeholder="Giá tối đa"
+                       keyboardType="numeric"
+                    />
+                </View>
+
+                {/* Nút thiết lập lại và áp dụng */}
+                <View style={styles.buttonContainer}>
+                    <TouchableOpacity onPress={resetFilters} style={styles.buttonReset}>
+                        <Text style={styles.buttonText}>Thiết lập lại</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={applyFilter} style={styles.buttonApply}>
+                         <Text style={styles.buttonText}>Áp dụng</Text>
+                    </TouchableOpacity>
+                </View>
+            </View>
+        </View>
+    </Modal>
+    )}
     </ScrollView>
   );
 }
-const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: '#fff',
-      paddingHorizontal: 16,
-      paddingTop: 50,
-    },
-    header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginBottom: 12,
-    },
-    searchInput: {
-      flex: 1,
-      marginLeft: 10,
-      padding: 10,
-      borderRadius: 10,
-      backgroundColor: '#f2f2f2',
-    },
-    banner: {
-      height: 150,
-      borderRadius: 12,
-      overflow: 'hidden',
-      marginBottom: 20,
-    },
-    bannerImage: {
-      width: '100%',
-      height: '100%',
-    },
-    section: {
-      marginBottom: 20,
-    },
-    sectionHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: 10,
-    },
-    sectionTitle: {
-      fontSize: 18,
-      fontWeight: '600',
-    },
-    categories: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      justifyContent: 'space-between',
-    },
-   categoryItem: {
-  backgroundColor: '#f0f0f0',
-  paddingVertical: 10,
-  paddingHorizontal: 16,
-  borderRadius: 20,
-  marginRight: 10,
-  marginBottom: 10,
-},
 
-categoryText: {
-  fontSize: 14,
-  fontWeight: '500',
-  color: '#333',
-},
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#fff",
+    paddingHorizontal: 16,
+    paddingTop: 50,
+    marginBottom: 55,
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+    justifyContent: "space-between",
+  },
+  searchInput: {
+    flex: 1,
+    marginHorizontal: 10,
+    padding: 10,
+    borderRadius: 10,
+    backgroundColor: "#f2f2f2",
+  },
+  banner: {
+    height: 150,
+    borderRadius: 12,
+    overflow: "hidden",
+    marginBottom: 20,
+  },
+  bannerImage: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover",
+  },
+  section: {
+    marginBottom: 15,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+  },
+  categoriesScrollContainer: {
+    flexDirection: "row",
+    paddingBottom: 10,
+  },
+  categoryItem: {
+    backgroundColor: "#f0f0f0",
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    marginRight: 10,
+  },
+  categoryText: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: "#333",
+  },
 
     productCard: {
       width: 120,
