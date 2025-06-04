@@ -1,11 +1,48 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, TextInput, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Image, TextInput, TouchableOpacity, Alert, Modal, TouchableWithoutFeedback } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { GetCategories } from '../servers/ProductService';
+import { GetCategories, getProducts, GetProducts } from '../servers/ProductService';
 
 export default function HomeScreen({ navigation }) {
     const [categories, setCategories] = useState([]);
+    const [products, setProducts] = useState([]);
+
+    // Add these filter-related states and functions
+    const [showFilter, setShowFilter] = useState(false);
+    const [selectedBrands, setSelectedBrands] = useState([]);
+    const [selectedSizes, setSelectedSizes] = useState([]);
+    const [minPrice, setMinPrice] = useState('');
+    const [maxPrice, setMaxPrice] = useState('');
+
+    const toggleFilter = () => setShowFilter(!showFilter);
+
+    const toggleBrandSelection = (brand) => {
+        setSelectedBrands((prev) =>
+            prev.includes(brand)
+                ? prev.filter((b) => b !== brand)
+                : [...prev, brand]
+        );
+    };
+
+    const toggleSizeSelection = (size) => {
+        setSelectedSizes((prev) =>
+            prev.includes(size)
+                ? prev.filter((s) => s !== size)
+                : [...prev, size]
+        );
+    };
+
+    const resetFilters = () => {
+        setSelectedBrands([]);
+        setSelectedSizes([]);
+        setMinPrice('');
+        setMaxPrice('');
+    };
+
+    const applyFilter = () => {
+        setShowFilter(false);
+    };
 
   useEffect(() => {
     const checkLoginStatus = async () => {
@@ -22,7 +59,7 @@ export default function HomeScreen({ navigation }) {
     };
 
     checkLoginStatus();
-  }, []);
+  }, [categories, navigation]);
 
   useEffect(() => {
     const loadCategories = async () => {
@@ -39,6 +76,22 @@ export default function HomeScreen({ navigation }) {
       }
     };
     loadCategories();
+
+    const loadProducts = async () => {
+      try {
+        const res = await getProducts();
+        if (res && Array.isArray(res)) {
+          console.log("Products loaded:", res);
+          setProducts(res);
+        } else {
+          Alert.alert("Lỗi", "Không thể tải sản phẩm");
+        }
+      } catch (error) {
+        Alert.alert("Lỗi", "Đã xảy ra lỗi khi tải sản phẩm");
+        console.log("Load product error:", error);
+      }
+    };
+    loadProducts();
   }, []);
   return (
     <ScrollView style={styles.container}>
@@ -91,8 +144,7 @@ export default function HomeScreen({ navigation }) {
           ))}
         </ScrollView>
       </View>
-
-      {/* Products */}
+  {/* Products */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Sản phẩm</Text>
@@ -204,6 +256,7 @@ export default function HomeScreen({ navigation }) {
         </View>
     </Modal>
     )}
+    
     </ScrollView>
   );
 }
