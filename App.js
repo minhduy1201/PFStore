@@ -30,6 +30,8 @@ import TransactionHistoryScreen from "./src/screens/TransactionHistoryScreen";
 import EditProfileScreen from "./src/screens/EditProfileScreen";
 import ProductByCategory from "./src/screens/ProductByCategory";
 
+import SearchProductsScreen from "./src/screens/SearchProductsScreen";
+
 // import SettingsScreen from './src/screens/Settings/SettingsScreen';
 
 const Stack = createNativeStackNavigator();
@@ -152,6 +154,7 @@ export default function App() {
         />
 
         <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+        <Stack.Screen name="SearchProducts" component={SearchProductsScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
