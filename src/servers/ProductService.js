@@ -12,6 +12,17 @@ export const GetCategories = async () => {
   }
 };
 
+//Lấy danh sách các thương hiệu
+export const GetBrands = async () => {
+  try {
+    const response = await api.get("/Brands");
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "Lỗi khi lấy danh sách thương hiệu");
+    return null;
+  }
+};
+
 //Lấy danh sách các sản phẩm
 export const getProducts = async () => {
   try {
@@ -210,10 +221,10 @@ export const searchProducts = async (keyword) => {
       },
       {
         id: "prod003",
-        name: "Quần jogger Nike thể thao",
+        name: "Áo Nike thể thao",
         imageUrl: "https://via.placeholder.com/200x200/333333/FFFFFF?text=Nike+Jogger",
         price: 300000,
-        description: "Quần jogger Nike chất liệu cao cấp, thoải mái khi vận động.",
+        description: "Áo Nike chất liệu cao cấp, thoải mái khi vận động.",
       },
     ];
 
