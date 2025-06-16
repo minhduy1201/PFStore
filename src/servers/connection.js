@@ -7,27 +7,25 @@ const API_BASE_URL = 'https://5242-1-53-56-145.ngrok-free.app/api';
 export const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
 });
 
 export const Logout = async (navigation) => {
   try {
-    await AsyncStorage.removeItem('token');
-    await AsyncStorage.removeItem('user');
-    Alert.alert('Thông báo', 'Đã đăng xuất thành công');
-    navigation.replace('Login');
+    await AsyncStorage.removeItem("token");
+    await AsyncStorage.removeItem("user");
+    Alert.alert("Thông báo", "Đã đăng xuất thành công");
+    navigation.replace("Login");
   } catch (error) {
-    console.error('Lỗi khi đăng xuất:', error);
+    console.error("Lỗi khi đăng xuất:", error);
   }
 };
-
-
 
 // Interceptor để tự động thêm token vào header
 api.interceptors.request.use(
   async (config) => {
-    const token = await AsyncStorage.getItem('token');
+    const token = await AsyncStorage.getItem("token");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -40,16 +38,16 @@ api.interceptors.request.use(
 export const handleApiError = (error, defaultMessage) => {
   if (error.response && error.response.data) {
     const message = error.response.message || defaultMessage;
-    Alert.alert('Lỗi', message, [
+    Alert.alert("Lỗi", message, [
       {
-        text: 'OK',
+        text: "OK",
         onPress: () => console.log(message),
       },
     ]);
   } else {
-   Alert.alert('Lỗi', defaultMessage, [
+    Alert.alert("Lỗi", defaultMessage, [
       {
-        text: 'OK',
+        text: "OK",
         onPress: () => console.log(defaultMessage),
       },
     ]);

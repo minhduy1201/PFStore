@@ -2,8 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Image, TextInput, TouchableOpacity, Alert, Modal, TouchableWithoutFeedback, Keyboard } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { get } from 'react-native/Libraries/TurboModule/TurboModuleRegistry';
-import { GetCategories } from '../servers/ProductService';
+import { GetCategories, getProducts, GetProducts } from '../servers/ProductService';
 
 export default function HomeScreen({ navigation }) {
   const [categories, setCategories] = useState([]);
@@ -25,7 +24,7 @@ export default function HomeScreen({ navigation }) {
     };
 
     checkLoginStatus();
-  }, []);
+  }, [categories, navigation]);
 
   useEffect(() => {
     const loadCategories = async () => {
@@ -120,8 +119,7 @@ export default function HomeScreen({ navigation }) {
           ))}
         </ScrollView>
       </View>
-
-      {/* Products */}
+  {/* Products */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Sản phẩm</Text>
@@ -166,61 +164,72 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#fff",
-    paddingHorizontal: 16,
-    paddingTop: 50,
-    marginBottom: 55,
+    paddingTop: 30, // Adjust for status bar
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 12,
-    justifyContent: "space-between",
+    padding: 10,
+    backgroundColor: "#fff",
+  },
+  logo: {
+    width: 50,
+    height: 50,
+    marginRight: 10,
   },
   searchInput: {
     flex: 1,
-    marginHorizontal: 10,
-    padding: 10,
-    borderRadius: 10,
-    backgroundColor: "#f2f2f2",
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    height: 40,
+    marginRight: 8,
+    backgroundColor: "#f5f5f5",
+  },
+  searchButton: {
+    padding: 8,
+    marginRight: 8,
   },
   banner: {
-    height: 150,
-    borderRadius: 12,
-    overflow: "hidden",
-    marginBottom: 20,
+    marginVertical: 10,
+    alignItems: "center",
   },
   bannerImage: {
     width: "100%",
-    height: "100%",
-    resizeMode: "cover",
+    height: 120,
+    borderRadius: 10,
   },
   section: {
-    marginBottom: 15,
+    marginVertical: 10,
+    paddingHorizontal: 10,
   },
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 10,
+    marginBottom: 8,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: "600",
+    fontWeight: "bold",
   },
   categoriesScrollContainer: {
-    flexDirection: "row",
-    paddingBottom: 10,
+    paddingVertical: 5,
   },
   categoryItem: {
-    backgroundColor: "#f0f0f0",
-    paddingVertical: 8,
+    paddingVertical: 6,
     paddingHorizontal: 14,
-    borderRadius: 20,
-    marginRight: 10,
+    borderRadius: 16,
+    backgroundColor: "#f0f0f0",
+    marginRight: 8,
+    marginBottom: 5,
+  },
+  selectedCategory: {
+    backgroundColor: "#007bff",
   },
   categoryText: {
-    fontSize: 13,
-    fontWeight: "500",
+    fontSize: 14,
     color: "#333",
   },
 
@@ -246,5 +255,6 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
   },
+
 
 });
