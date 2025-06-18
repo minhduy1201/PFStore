@@ -53,8 +53,6 @@ export default function HomeScreen({ navigation }) {
         const res = await GetCategories();
         if (res && Array.isArray(res)) {
           setCategories(res);
-        } else {
-          Alert.alert("Lỗi", "Không thể tải danh mục sản phẩm");
         }
       } catch (error) {
         Alert.alert("Lỗi", "Đã xảy ra lỗi khi tải danh mục");
