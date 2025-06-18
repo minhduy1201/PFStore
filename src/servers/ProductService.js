@@ -179,3 +179,230 @@ export const createPost = async (newProductData) => {
     throw error;
   }
 };
+
+// Mô phỏng API tìm kiếm sản phẩm theo từ khóa
+export const searchProducts = async (keyword) => {
+  try {
+    // Giả lập độ trễ
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    console.log(`Mock API: Đang tìm kiếm sản phẩm theo từ khóa: ${keyword}`);
+
+    // --- MÔ PHỎNG API CALL ---
+    // Trong thực tế, bạn sẽ làm như thế này (giả sử backend có endpoint này):
+    // const response = await api.get(`/Products/search?keyword=${keyword}`);
+    // return response.data; // Trả về dữ liệu từ backend
+
+    // Giả lập dữ liệu tìm kiếm
+    const MOCK_SEARCH_RESULTS = [
+      {
+        id: "prod001",
+        name: "Áo thun Champion đen đỏ size L",
+        imageUrl: "https://via.placeholder.com/200x200/000000/FF0000?text=Champion+TShirt",
+        price: 150000,
+        description: "Áo thun Champion màu đen phối đỏ, form Raglan, size L, hàng chất lượng cao.",
+      },
+      {
+        id: "prod002",
+        name: "Jacket Champion - Hàng 2hand, legit",
+        imageUrl: "https://via.placeholder.com/200x200/000080/FFFFFF?text=Champion+Jacket",
+        price: 250000,
+        description: "Áo khoác Champion đã qua sử dụng nhưng còn mới, hàng chính hãng.",
+      },
+      {
+        id: "prod003",
+        name: "Quần jogger Nike thể thao",
+        imageUrl: "https://via.placeholder.com/200x200/333333/FFFFFF?text=Nike+Jogger",
+        price: 300000,
+        description: "Quần jogger Nike chất liệu cao cấp, thoải mái khi vận động.",
+      },
+    ];
+
+    // Trả về dữ liệu giả lập
+    return MOCK_SEARCH_RESULTS.filter((product) =>
+      product.name.toLowerCase().includes(keyword.toLowerCase())
+    ); // Lọc sản phẩm theo từ khóa
+  } catch (error) {
+    console.error("Lỗi khi tìm kiếm sản phẩm:", error);
+    handleApiError(error, "Không thể tìm kiếm sản phẩm.");
+    throw error;
+  }
+};
+
+// Mô phỏng API lọc sản phẩm theo thương hiệu
+export const filterProductsByBrand = async (brand) => {
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 1500)); // Giả lập độ trễ
+    console.log(`Mock API: Đang lọc sản phẩm theo thương hiệu: ${brand}`);
+
+    // --- MÔ PHỎNG API CALL ---
+    // Trong thực tế, bạn sẽ làm như thế này (giả sử backend có endpoint này):
+    // const response = await api.get(`/Products/filter/brand?brand=${brand}`);
+    // return response.data; // Trả về dữ liệu từ backend
+
+    const MOCK_PRODUCTS = [
+      {
+        id: "prod001",
+        name: "Áo thun Champion đen đỏ size L",
+        brand: "Champion",
+        imageUrl: "https://via.placeholder.com/200x200/000000/FF0000?text=Champion+TShirt",
+        price: 150000,
+      },
+      {
+        id: "prod002",
+        name: "Jacket Champion - Hàng 2hand, legit",
+        brand: "Champion",
+        imageUrl: "https://via.placeholder.com/200x200/000080/FFFFFF?text=Champion+Jacket",
+        price: 250000,
+      },
+      {
+        id: "prod003",
+        name: "Quần jogger Nike thể thao",
+        brand: "Nike",
+        imageUrl: "https://via.placeholder.com/200x200/333333/FFFFFF?text=Nike+Jogger",
+        price: 300000,
+      },
+    ];
+
+    return MOCK_PRODUCTS.filter((product) => product.brand.toLowerCase() === brand.toLowerCase());
+  } catch (error) {
+    console.error("Lỗi khi lọc sản phẩm theo thương hiệu:", error);
+    handleApiError(error, "Không thể lọc sản phẩm theo thương hiệu.");
+    throw error;
+  }
+};
+
+// Mô phỏng API lọc sản phẩm theo size
+export const filterProductsBySize = async (size) => {
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 1500)); // Giả lập độ trễ
+    console.log(`Mock API: Đang lọc sản phẩm theo size: ${size}`);
+
+    // --- MÔ PHỎNG API CALL ---
+    // Trong thực tế, bạn sẽ làm như thế này (giả sử backend có endpoint này):
+    // const response = await api.get(`/Products/filter/size?size=${size}`);
+    // return response.data; // Trả về dữ liệu từ backend
+
+    const MOCK_PRODUCTS = [
+      {
+        id: "prod001",
+        name: "Áo thun Champion đen đỏ size L",
+        size: "L",
+        imageUrl: "https://via.placeholder.com/200x200/000000/FF0000?text=Champion+TShirt",
+        price: 150000,
+      },
+      {
+        id: "prod002",
+        name: "Jacket Champion - Hàng 2hand, legit",
+        size: "M",
+        imageUrl: "https://via.placeholder.com/200x200/000080/FFFFFF?text=Champion+Jacket",
+        price: 250000,
+      },
+      {
+        id: "prod003",
+        name: "Quần jogger Nike thể thao",
+        size: "L",
+        imageUrl: "https://via.placeholder.com/200x200/333333/FFFFFF?text=Nike+Jogger",
+        price: 300000,
+      },
+    ];
+
+    return MOCK_PRODUCTS.filter((product) => product.size === size);
+  } catch (error) {
+    console.error("Lỗi khi lọc sản phẩm theo size:", error);
+    handleApiError(error, "Không thể lọc sản phẩm theo size.");
+    throw error;
+  }
+};
+
+// Mô phỏng API lọc sản phẩm theo giá
+export const filterProductsByPrice = async (minPrice, maxPrice) => {
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 1500)); // Giả lập độ trễ
+    console.log(`Mock API: Đang lọc sản phẩm theo giá: từ ${minPrice} đến ${maxPrice}`);
+
+    // --- MÔ PHỎNG API CALL ---
+    // Trong thực tế, bạn sẽ làm như thế này (giả sử backend có endpoint này):
+    // const response = await api.get(`/Products/filter/price?minPrice=${minPrice}&maxPrice=${maxPrice}`);
+    // return response.data; // Trả về dữ liệu từ backend
+
+    const MOCK_PRODUCTS = [
+      {
+        id: "prod001",
+        name: "Áo thun Champion đen đỏ size L",
+        price: 150000,
+        imageUrl: "https://via.placeholder.com/200x200/000000/FF0000?text=Champion+TShirt",
+      },
+      {
+        id: "prod002",
+        name: "Jacket Champion - Hàng 2hand, legit",
+        price: 250000,
+        imageUrl: "https://via.placeholder.com/200x200/000080/FFFFFF?text=Champion+Jacket",
+      },
+      {
+        id: "prod003",
+        name: "Quần jogger Nike thể thao",
+        price: 300000,
+        imageUrl: "https://via.placeholder.com/200x200/333333/FFFFFF?text=Nike+Jogger",
+      },
+    ];
+
+    return MOCK_PRODUCTS.filter(
+      (product) => product.price >= minPrice && product.price <= maxPrice
+    );
+  } catch (error) {
+    console.error("Lỗi khi lọc sản phẩm theo giá:", error);
+    handleApiError(error, "Không thể lọc sản phẩm theo giá.");
+    throw error;
+  }
+};
+
+// Mô phỏng API lọc sản phẩm theo kết hợp các bộ lọc
+export const filterProducts = async (brand, size, minPrice, maxPrice) => {
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 1500)); // Giả lập độ trễ
+    console.log(`Mock API: Đang lọc sản phẩm với bộ lọc kết hợp`);
+
+    // --- MÔ PHỎNG API CALL ---
+    // Trong thực tế, bạn sẽ làm như thế này (giả sử backend có endpoint này):
+    // const response = await api.get(`/Products/filter?brand=${brand}&size=${size}&minPrice=${minPrice}&maxPrice=${maxPrice}`);
+    // return response.data; // Trả về dữ liệu từ backend
+
+    const MOCK_PRODUCTS = [
+      {
+        id: "prod001",
+        name: "Áo thun Champion đen đỏ size L",
+        brand: "Champion",
+        size: "L",
+        price: 150000,
+        imageUrl: "https://via.placeholder.com/200x200/000000/FF0000?text=Champion+TShirt",
+      },
+      {
+        id: "prod002",
+        name: "Jacket Champion - Hàng 2hand, legit",
+        brand: "Champion",
+        size: "M",
+        price: 250000,
+        imageUrl: "https://via.placeholder.com/200x200/000080/FFFFFF?text=Champion+Jacket",
+      },
+      {
+        id: "prod003",
+        name: "Quần jogger Nike thể thao",
+        brand: "Nike",
+        size: "L",
+        price: 300000,
+        imageUrl: "https://via.placeholder.com/200x200/333333/FFFFFF?text=Nike+Jogger",
+      },
+    ];
+
+    return MOCK_PRODUCTS.filter(
+      (product) =>
+        (brand ? product.brand === brand : true) &&
+        (size ? product.size === size : true) &&
+        (minPrice && maxPrice ? product.price >= minPrice && product.price <= maxPrice : true)
+    );
+  } catch (error) {
+    console.error("Lỗi khi lọc sản phẩm:", error);
+    handleApiError(error, "Không thể lọc sản phẩm.");
+    throw error;
+  }
+};
