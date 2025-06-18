@@ -286,166 +286,178 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#fff",
-    paddingHorizontal: 16,
-    paddingTop: 50,
-    marginBottom: 55,
+    paddingTop: 30, // Adjust for status bar
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 12,
-    justifyContent: "space-between",
+    padding: 10,
+    backgroundColor: "#fff",
+  },
+  logo: {
+    width: 50,
+    height: 50,
+    marginRight: 10,
   },
   searchInput: {
     flex: 1,
-    marginHorizontal: 10,
-    padding: 10,
-    borderRadius: 10,
-    backgroundColor: "#f2f2f2",
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    height: 40,
+    marginRight: 8,
+    backgroundColor: "#f5f5f5",
+  },
+  searchButton: {
+    padding: 8,
+    marginRight: 8,
   },
   banner: {
-    height: 150,
-    borderRadius: 12,
-    overflow: "hidden",
-    marginBottom: 20,
+    marginVertical: 10,
+    alignItems: "center",
   },
   bannerImage: {
     width: "100%",
-    height: "100%",
-    resizeMode: "cover",
+    height: 120,
+    borderRadius: 10,
   },
   section: {
-    marginBottom: 15,
+    marginVertical: 10,
+    paddingHorizontal: 10,
   },
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 10,
+    marginBottom: 8,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: "600",
+    fontWeight: "bold",
   },
   categoriesScrollContainer: {
-    flexDirection: "row",
-    paddingBottom: 10,
+    paddingVertical: 5,
   },
   categoryItem: {
-    backgroundColor: "#f0f0f0",
-    paddingVertical: 8,
+    paddingVertical: 6,
     paddingHorizontal: 14,
-    borderRadius: 20,
-    marginRight: 10,
+    borderRadius: 16,
+    backgroundColor: "#f0f0f0",
+    marginRight: 8,
+    marginBottom: 5,
+  },
+  selectedCategory: {
+    backgroundColor: "#007bff",
   },
   categoryText: {
-    fontSize: 13,
-    fontWeight: "500",
+    fontSize: 14,
     color: "#333",
   },
-
-    productCard: {
-      width: 120,
-      marginRight: 16,
-    },
-    productImage: {
-      width: '100%',
-      height: 100,
-      borderRadius: 10,
-      backgroundColor: '#eee',
-    },
-    productTitle: {
-      marginTop: 5,
-      fontSize: 14,
-    },
-    productPrice: {
-      fontWeight: 'bold',
-      marginTop: 2,
-    },
-    logo: {
-        width: 32,
-        height: 32,
-      },
-
-// Thêm style cho phần mới
-
-searchInput: {
+  productsGridContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+  },
+  productCard: {
+    width: "48%",
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    marginBottom: 12,
+    padding: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  productImage: {
+    width: "100%",
+    height: 120,
+    borderRadius: 8,
+    marginBottom: 8,
+    backgroundColor: "#f5f5f5",
+  },
+  productInfo: {
+    alignItems: "flex-start",
+  },
+  productTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    marginBottom: 4,
+  },
+  productPrice: {
+    fontSize: 15,
+    color: "#e53935",
+    fontWeight: "bold",
+  },
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.3)",
+  },
+  filterContainer: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    elevation: 10,
+  },
+  filterContent: {},
+  filterTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 12,
+  },
+  filterLabel: {
+    fontSize: 15,
+    fontWeight: "bold",
+    marginTop: 10,
+    marginBottom: 5,
+  },
+  filterInput: {
     borderWidth: 1,
     borderColor: "#ccc",
-    padding: 10,
-    borderRadius: 5,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    height: 40,
+    marginRight: 8,
+    backgroundColor: "#f5f5f5",
+    flex: 1,
   },
-  searchButton: {
-    marginTop: 10,
-    padding: 10,
-    backgroundColor: "#4CAF50",
-    borderRadius: 5,
+  priceContainer: {
+    flexDirection: "row",
     alignItems: "center",
+    marginBottom: 10,
   },
-
-overlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    },
-    filterContainer: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        backgroundColor: '#fff',
-        padding: 20,
-        borderTopLeftRadius: 10,
-        borderTopRightRadius: 10,
-    },
-    filterContent: {
-        padding: 10,
-    },
-    filterTitle: {
-        fontSize: 20,
-        fontWeight: '600',
-        marginBottom: 20,
-    },
-    filterLabel: {
-        fontSize: 16,
-        marginVertical: 10,
-    },
-    filterInput: {
-        borderWidth: 1,
-        borderColor: '#ccc',
-        borderRadius: 5,
-        padding: 10,
-        marginBottom: 10,
-    },
-    selectedCategory: {
-        backgroundColor: '#4CAF50',
-    },
-    selectedCategory: {
-        backgroundColor: '#4CAF50',
-    },
-    priceContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-    },
-    buttonContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginTop: 20,
-    },
-    buttonReset: {
-        backgroundColor: '#ccc',
-        padding: 10,
-        borderRadius: 5,
-        width: '48%',
-    },
-    buttonApply: {
-        backgroundColor: '#4CAF50',
-        padding: 10,
-        borderRadius: 5,
-        width: '48%',
-    },
-    buttonText: {
-        color: '#fff',
-        textAlign: 'center',
-    },      
-
-  });
+  buttonContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 16,
+  },
+  buttonReset: {
+    backgroundColor: "#ccc",
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+  },
+  buttonApply: {
+    backgroundColor: "#007bff",
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+  },
+  buttonText: {
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: 15,
+  },
+  categories: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginBottom: 8,
+  },
+});

@@ -4,24 +4,29 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   TextInput,
   Image,
   Platform,
-  KeyboardAvoidingView,
   ActivityIndicator,
   Alert,
+  SafeAreaView,
 } from "react-native";
 import { MaterialIcons, MaterialCommunityIcons } from "@expo/vector-icons";
+import DropDownPicker from "react-native-dropdown-picker";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 
 import {
   fetchProfileData,
   updateProfileData,
   changeUserPassword,
 } from "../servers/ProfileService";
+import { getProvinces, getDistricts, getWards } from "../servers/LocationService";
 
-const EditProfileScreen = ({ navigation }) => {
+const EditProfileScreen = ({ navigation, route }) => {
+  // Lấy userId từ params hoặc context/store
+  const userId = route?.params?.userId ?? 1;
+
   // State chính để lưu trữ tất cả thông tin hồ sơ
   const [profileData, setProfileData] = useState(null);
   const [loading, setLoading] = useState(true); // Trạng thái loading chung cho toàn màn hình hoặc các thao tác
@@ -35,14 +40,37 @@ const EditProfileScreen = ({ navigation }) => {
   const [isConfirmNewPasswordVisible, setIsConfirmNewPasswordVisible] =
     useState(false);
 
+  // Dropdown states
+  const [provinceOpen, setProvinceOpen] = useState(false);
+  const [districtOpen, setDistrictOpen] = useState(false);
+  const [wardOpen, setWardOpen] = useState(false);
+
+  const [provinceValue, setProvinceValue] = useState(null);
+  const [districtValue, setDistrictValue] = useState(null);
+  const [wardValue, setWardValue] = useState(null);
+
+  const [provinceItems, setProvinceItems] = useState([]);
+  const [districtItems, setDistrictItems] = useState([]);
+  const [wardItems, setWardItems] = useState([]);
+
   //Hàm render
   useEffect(() => {
     const loadProfile = async () => {
       try {
         setLoading(true);
         setError(null);
-        const data = await fetchProfileData();
+        const data = await fetchProfileData(userId);
         setProfileData(data);
+
+        // Nếu có city, tìm code tương ứng để set cho provinceValue
+        if (data.diaChi?.thanhPho) {
+          const provinces = await getProvinces();
+          const foundProvince = provinces.find(
+            (p) => p.name === data.diaChi.thanhPho
+          );
+          if (foundProvince) setProvinceValue(foundProvince.code);
+        }
+        // Nếu có thể, bạn cũng có thể set districtValue, wardValue tương tự
       } catch (err) {
         setError("Không thể tải dữ liệu hồ sơ.");
         console.error("Lỗi khi tải dữ liệu trong EditProfileScreen:", err);
@@ -53,6 +81,45 @@ const EditProfileScreen = ({ navigation }) => {
 
     loadProfile();
   }, []);
+
+  // Load provinces khi mở màn hình
+  useEffect(() => {
+    getProvinces().then((data) => {
+      setProvinceItems(data.map((p) => ({ label: p.name, value: p.code })));
+    });
+  }, []);
+
+  // Load districts khi chọn tỉnh
+  useEffect(() => {
+    if (provinceValue) {
+      getDistricts(provinceValue).then((data) => {
+        setDistrictItems(data.map((d) => ({ label: d.name, value: d.code })));
+        setDistrictValue(null);
+        setWardItems([]);
+        setWardValue(null);
+      });
+    }
+  }, [provinceValue]);
+
+  // Load wards khi chọn huyện
+  useEffect(() => {
+    if (districtValue) {
+      getWards(districtValue).then((data) => {
+        setWardItems(data.map((w) => ({ label: w.name, value: w.code })));
+        setWardValue(null);
+      });
+    }
+  }, [districtValue]);
+
+  // Khi chọn tỉnh, cập nhật city (tên tỉnh) cho profileData
+  useEffect(() => {
+    if (provinceValue && provinceItems.length > 0) {
+      const selected = provinceItems.find((p) => p.value === provinceValue);
+      if (selected) {
+        handleProfileDataChange("diaChi.thanhPho", selected.label);
+      }
+    }
+  }, [provinceValue]);
 
   // --- Hàm cập nhật giá trị của profileData ---
   const handleProfileDataChange = (field, value) => {
@@ -85,7 +152,7 @@ const EditProfileScreen = ({ navigation }) => {
 
     setLoading(true);
     try {
-      const response = await updateProfileData(profileData);
+      const response = await updateProfileData(userId, profileData);
       Alert.alert("Thành công", response.message || "Hồ sơ đã được cập nhật!");
     } catch (err) {
       console.error("Lỗi cập nhật hồ sơ trong EditProfileScreen:", err);
@@ -157,13 +224,15 @@ const EditProfileScreen = ({ navigation }) => {
     );
   }
 
+  // Tách họ và tên từ fullName
+  const fullName = profileData.fullName || "";
+  const nameParts = fullName.trim().split(" ");
+  const ho = nameParts.length > 1 ? nameParts.slice(0, -1).join(" ") : fullName;
+  const ten = nameParts.length > 1 ? nameParts[nameParts.length - 1] : "";
+
   // --- UI chính khi dữ liệu đã được tải thành công ---
   return (
-    <KeyboardAvoidingView
-      style={styles.fullScreenContainer}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
-    >
+    <SafeAreaView style={styles.container}>
       <View style={styles.headerContainer}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
@@ -175,7 +244,12 @@ const EditProfileScreen = ({ navigation }) => {
         <View style={{ width: 30 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollViewContent}>
+      <KeyboardAwareScrollView
+        contentContainerStyle={styles.scrollViewContent}
+        enableOnAndroid
+        extraScrollHeight={100}
+        keyboardShouldPersistTaps="handled"
+      >
         {/* Phần Avatar */}
         <View style={styles.avatarContainer}>
           <Image
@@ -195,7 +269,7 @@ const EditProfileScreen = ({ navigation }) => {
               <Text style={styles.inputLabel}>HỌ</Text>
               <TextInput
                 style={styles.input}
-                value={profileData.ho}
+                value={ho}
                 onChangeText={(text) => handleProfileDataChange("ho", text)}
                 placeholder="Nhập họ"
               />
@@ -204,7 +278,7 @@ const EditProfileScreen = ({ navigation }) => {
               <Text style={styles.inputLabel}>TÊN</Text>
               <TextInput
                 style={styles.input}
-                value={profileData.ten}
+                value={ten}
                 onChangeText={(text) => handleProfileDataChange("ten", text)}
                 placeholder="Nhập tên"
               />
@@ -248,48 +322,68 @@ const EditProfileScreen = ({ navigation }) => {
 
           <View style={styles.row}>
             <View style={styles.inputGroupHalf}>
-              <Text style={styles.inputLabel}>QUỐC GIA</Text>
-              <TextInput
-                style={styles.input}
-                value={profileData.diaChi.quocGia}
-                onChangeText={(text) =>
-                  handleProfileDataChange("diaChi.quocGia", text)
-                }
-                placeholder="Quốc gia"
+              <Text style={styles.inputLabel}>TỈNH/THÀNH PHỐ</Text>
+              <DropDownPicker
+                open={provinceOpen}
+                value={provinceValue}
+                items={provinceItems}
+                setOpen={setProvinceOpen}
+                setValue={setProvinceValue}
+                setItems={setProvinceItems}
+                placeholder="Chọn tỉnh/thành phố"
+                style={styles.dropdown}
+                textStyle={styles.dropdownText}
+                dropDownContainerStyle={styles.dropdownBox}
+                zIndex={3000}
+                zIndexInverse={1000}
               />
             </View>
             <View style={styles.inputGroupHalf}>
-              <Text style={styles.inputLabel}>TỈNH/THÀNH PHỐ</Text>
-              <TextInput
-                style={styles.input}
-                value={profileData.diaChi.tinhThanhPho}
-                onChangeText={(text) =>
-                  handleProfileDataChange("diaChi.tinhThanhPho", text)
-                }
-                placeholder="Tỉnh/Thành phố"
+              <Text style={styles.inputLabel}>QUẬN/HUYỆN</Text>
+              <DropDownPicker
+                open={districtOpen}
+                value={districtValue}
+                items={districtItems}
+                setOpen={setDistrictOpen}
+                setValue={setDistrictValue}
+                setItems={setDistrictItems}
+                placeholder="Chọn quận/huyện"
+                disabled={!provinceValue}
+                style={styles.dropdown}
+                textStyle={styles.dropdownText}
+                dropDownContainerStyle={styles.dropdownBox}
+                zIndex={2000}
+                zIndexInverse={2000}
               />
             </View>
           </View>
 
           <View style={styles.row}>
             <View style={styles.inputGroupHalf}>
-              <Text style={styles.inputLabel}>HUYỆN/XÃ</Text>
-              <TextInput
-                style={styles.input}
-                value={profileData.diaChi.huyenXa}
-                onChangeText={(text) =>
-                  handleProfileDataChange("diaChi.huyenXa", text)
-                }
-                placeholder="Huyện/Xã"
+              <Text style={styles.inputLabel}>XÃ/PHƯỜNG</Text>
+              <DropDownPicker
+                open={wardOpen}
+                value={wardValue}
+                items={wardItems}
+                setOpen={setWardOpen}
+                setValue={setWardValue}
+                setItems={setWardItems}
+                placeholder="Chọn xã/phường"
+                disabled={!districtValue}
+                style={styles.dropdown}
+                textStyle={styles.dropdownText}
+                dropDownContainerStyle={styles.dropdownBox}
+                zIndex={1000}
+                zIndexInverse={3000}
               />
             </View>
             <View style={styles.inputGroupHalf}>
               <Text style={styles.inputLabel}>TÊN ĐƯỜNG, SỐ NHÀ</Text>
               <TextInput
                 style={styles.input}
-                value={profileData.diaChi.tenDuongSoNha}
+                value={profileData.diaChi.tenDuong}
                 onChangeText={(text) =>
-                  handleProfileDataChange("diaChi.tenDuongSoNha", text)
+                  handleProfileDataChange("diaChi.tenDuong", text)
                 }
                 placeholder="Tên đường, số nhà"
               />
@@ -402,17 +496,13 @@ const EditProfileScreen = ({ navigation }) => {
             )}
           </Text>
         </TouchableOpacity>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
+    </SafeAreaView>
   );
 };
 
-// ... (styles remains the same as before)
 const styles = StyleSheet.create({
-  fullScreenContainer: {
-    flex: 1,
-    backgroundColor: "#f8f8f8",
-  },
+  container: { flex: 1, backgroundColor: "#f8f8f8" },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
@@ -590,6 +680,45 @@ const styles = StyleSheet.create({
   },
   eyeIcon: {
     paddingLeft: 10,
+  },
+  picker: {
+    height: 50,
+    borderColor: "#eee",
+    borderWidth: 1,
+    borderRadius: 8,
+    backgroundColor: "#f9f9f9",
+    marginBottom: 10,
+  },
+  addressSection: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 16,
+    margin: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  label: {
+    fontSize: 15,
+    fontWeight: "500",
+    color: "#333",
+    marginBottom: 6,
+    marginTop: 12,
+  },
+  dropdown: {
+    borderColor: "#e0e0e0",
+    borderRadius: 8,
+    minHeight: 44,
+    marginBottom: 8,
+    backgroundColor: "#fafbfc",
+  },
+  dropdownText: { fontSize: 15, color: "#333" },
+  dropdownBox: {
+    borderColor: "#e0e0e0",
+    borderRadius: 8,
+    backgroundColor: "#fff",
   },
 });
 
