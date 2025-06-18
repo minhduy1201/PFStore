@@ -11,11 +11,15 @@ import {
   Modal,
   TouchableWithoutFeedback,
   Keyboard,
+  Dimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { GetCategories, getProducts } from "../servers/ProductService";
 
+const { width } = Dimensions.get("window");
+// Calculate card width for two columns with spacing and padding
+const cardWidth = (width - 16 * 2 - 10) / 2; // (screenWidth - horizontalPadding * 2 - spaceBetweenCards) / 2
 export default function HomeScreen({ navigation }) {
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
@@ -376,107 +380,55 @@ const styles = StyleSheet.create({
     color: "#333",
   },
 
+  // --- New Styles for Products Grid ---
+  productsGridContainer: {
+    flexDirection: "row", // Arrange items in a row
+    flexWrap: "wrap", // Allow items to wrap to the next line
+    justifyContent: "space-between", // Distribute space between items
+  },
   productCard: {
-    width: 120,
-    marginRight: 16,
+    borderWidth: 1,
+    borderColor: "#f0f0f0",
+    backgroundColor: "#f0f0f0",
+    borderRadius: 15,
+    width: cardWidth, // Use the calculated cardWidth
+    marginBottom: 10, // Space between rows
+    padding: 8,
+    height: 220, // Adjusted height to accommodate image and text better
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    overflow: "hidden",
   },
   productImage: {
     width: "100%",
-    height: 100,
+    height: cardWidth - 16, // Keep aspect ratio, subtract padding
     borderRadius: 10,
     backgroundColor: "#eee",
+    marginBottom: 6,
+    resizeMode: "cover",
+  },
+  productInfo: {
+    flex: 1,
+    justifyContent: "space-between",
+    width: "100%",
   },
   productTitle: {
-    marginTop: 5,
-    fontSize: 14,
+    fontSize: 13,
+    fontWeight: "600",
+    marginBottom: 1,
+    color: "#333",
+    lineHeight: 18,
+    // Add these two lines to limit text to two lines
+    maxHeight: 36, // Approx height for 2 lines (18 * 2)
+    overflow: "hidden",
   },
   productPrice: {
+    fontSize: 14,
     fontWeight: "bold",
-    marginTop: 2,
+    marginTop: 1,
   },
   logo: {
     width: 32,
     height: 32,
-  },
-
-  // Thêm style cho phần mới
-
-  searchInput: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    padding: 10,
-    borderRadius: 5,
-  },
-  searchButton: {
-    marginTop: 10,
-    padding: 10,
-    backgroundColor: "#4CAF50",
-    borderRadius: 5,
-    alignItems: "center",
-  },
-
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.3)",
-  },
-  filterContainer: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: "#fff",
-    padding: 20,
-    borderTopLeftRadius: 10,
-    borderTopRightRadius: 10,
-  },
-  filterContent: {
-    padding: 10,
-  },
-  filterTitle: {
-    fontSize: 20,
-    fontWeight: "600",
-    marginBottom: 20,
-  },
-  filterLabel: {
-    fontSize: 16,
-    marginVertical: 10,
-  },
-  filterInput: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 5,
-    padding: 10,
-    marginBottom: 10,
-  },
-  selectedCategory: {
-    backgroundColor: "#4CAF50",
-  },
-  selectedCategory: {
-    backgroundColor: "#4CAF50",
-  },
-  priceContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  buttonContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 20,
-  },
-  buttonReset: {
-    backgroundColor: "#ccc",
-    padding: 10,
-    borderRadius: 5,
-    width: "48%",
-  },
-  buttonApply: {
-    backgroundColor: "#4CAF50",
-    padding: 10,
-    borderRadius: 5,
-    width: "48%",
-  },
-  buttonText: {
-    color: "#fff",
-    textAlign: "center",
   },
 });
