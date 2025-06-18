@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, TextInput, TouchableOpacity, Alert, Modal, TouchableWithoutFeedback } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Image, TextInput, TouchableOpacity, Alert, Modal, TouchableWithoutFeedback, Keyboard } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GetCategories, getProducts, GetProducts } from '../servers/ProductService';
@@ -7,42 +7,12 @@ import { GetCategories, getProducts, GetProducts } from '../servers/ProductServi
 export default function HomeScreen({ navigation }) {
     const [categories, setCategories] = useState([]);
     const [products, setProducts] = useState([]);
-
-    // Add these filter-related states and functions
+    const [keyword, setKeyword] = useState("");
     const [showFilter, setShowFilter] = useState(false);
     const [selectedBrands, setSelectedBrands] = useState([]);
     const [selectedSizes, setSelectedSizes] = useState([]);
     const [minPrice, setMinPrice] = useState('');
     const [maxPrice, setMaxPrice] = useState('');
-
-    const toggleFilter = () => setShowFilter(!showFilter);
-
-    const toggleBrandSelection = (brand) => {
-        setSelectedBrands((prev) =>
-            prev.includes(brand)
-                ? prev.filter((b) => b !== brand)
-                : [...prev, brand]
-        );
-    };
-
-    const toggleSizeSelection = (size) => {
-        setSelectedSizes((prev) =>
-            prev.includes(size)
-                ? prev.filter((s) => s !== size)
-                : [...prev, size]
-        );
-    };
-
-    const resetFilters = () => {
-        setSelectedBrands([]);
-        setSelectedSizes([]);
-        setMinPrice('');
-        setMaxPrice('');
-    };
-
-    const applyFilter = () => {
-        setShowFilter(false);
-    };
 
   useEffect(() => {
     const checkLoginStatus = async () => {
@@ -76,23 +46,68 @@ export default function HomeScreen({ navigation }) {
       }
     };
     loadCategories();
+  }, []);
 
+  useEffect(() => {
     const loadProducts = async () => {
       try {
         const res = await getProducts();
         if (res && Array.isArray(res)) {
-          console.log("Products loaded:", res);
           setProducts(res);
-        } else {
-          Alert.alert("Lỗi", "Không thể tải sản phẩm");
         }
       } catch (error) {
         Alert.alert("Lỗi", "Đã xảy ra lỗi khi tải sản phẩm");
-        console.log("Load product error:", error);
+        console.log("Load product:", error);
       }
     };
     loadProducts();
   }, []);
+
+  // Xử lý khi nhấn tìm kiếm
+  const handleSearch = () => {
+    navigation.navigate("SearchProducts", { keyword }); // Chuyển sang màn hình SearchProducts với từ khóa
+  };
+
+  // Xử lý mở/đóng filter popupAdd commentMore actions
+    const toggleFilter = () => {
+        setShowFilter(!showFilter);
+    };
+
+    
+    // Xử lý nút thiết lập lại
+    const resetFilters = () => {
+      setSelectedBrands([]);
+      setSelectedSizes([]);
+      setMinPrice('');
+      setMaxPrice('');
+    };
+    
+    
+    // Xử lý áp dụng lọc
+    const applyFilter = () => {
+      // lọc sản phẩm theo các lựa chọn đã chọn
+      console.log('Applied Filters:', { selectedBrands, selectedSizes, minPrice, maxPrice });
+      setShowFilter(false);
+    };
+
+    // Hàm để toggle chọn thương hiệu
+    const toggleBrandSelection = (brand) => {
+        if (selectedBrands.includes(brand)) {
+            setSelectedBrands(selectedBrands.filter(b => b !== brand)); // Bỏ chọn nếu đã chọn
+        } else {
+            setSelectedBrands([...selectedBrands, brand]); // Thêm vào danh sách đã chọn
+        }
+    };
+    
+    // Hàm để toggle chọn size
+    const toggleSizeSelection = (size) => {
+          if (selectedSizes.includes(size)) {
+              setSelectedSizes(selectedSizes.filter(s => s !== size));  // Bỏ chọn size nếu đã chọn
+          } else {
+              setSelectedSizes([...selectedSizes, size]);  // Thêm size vào danh sách đã chọn
+          }
+      };
+  
   return (
     <ScrollView style={styles.container}>
       {/* Thanh tìm kiếm */}
@@ -103,6 +118,12 @@ export default function HomeScreen({ navigation }) {
     resizeMode="contain"
   />
   <TextInput style={styles.searchInput} placeholder="Tìm kiếm sản phẩm" />
+  <TouchableOpacity onPress={handleSearch} style={styles.searchButton}>
+        <Ionicons name="search" size={24} color="black" />
+      </TouchableOpacity>
+  <TouchableOpacity onPress={toggleFilter}>
+    <Ionicons name="filter" size={24} color="black" />
+  </TouchableOpacity>
 </View>
 
       {/* Promotion Banner */}
@@ -345,5 +366,86 @@ const styles = StyleSheet.create({
         width: 32,
         height: 32,
       },
-      
+
+// Thêm style cho phần mới
+
+searchInput: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    padding: 10,
+    borderRadius: 5,
+  },
+  searchButton: {
+    marginTop: 10,
+    padding: 10,
+    backgroundColor: "#4CAF50",
+    borderRadius: 5,
+    alignItems: "center",
+  },
+
+overlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    },
+    filterContainer: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        backgroundColor: '#fff',
+        padding: 20,
+        borderTopLeftRadius: 10,
+        borderTopRightRadius: 10,
+    },
+    filterContent: {
+        padding: 10,
+    },
+    filterTitle: {
+        fontSize: 20,
+        fontWeight: '600',
+        marginBottom: 20,
+    },
+    filterLabel: {
+        fontSize: 16,
+        marginVertical: 10,
+    },
+    filterInput: {
+        borderWidth: 1,
+        borderColor: '#ccc',
+        borderRadius: 5,
+        padding: 10,
+        marginBottom: 10,
+    },
+    selectedCategory: {
+        backgroundColor: '#4CAF50',
+    },
+    selectedCategory: {
+        backgroundColor: '#4CAF50',
+    },
+    priceContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+    },
+    buttonContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginTop: 20,
+    },
+    buttonReset: {
+        backgroundColor: '#ccc',
+        padding: 10,
+        borderRadius: 5,
+        width: '48%',
+    },
+    buttonApply: {
+        backgroundColor: '#4CAF50',
+        padding: 10,
+        borderRadius: 5,
+        width: '48%',
+    },
+    buttonText: {
+        color: '#fff',
+        textAlign: 'center',
+    },      
+
   });
