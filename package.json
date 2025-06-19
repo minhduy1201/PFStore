@@ -18,21 +18,30 @@
     "@react-navigation/native-stack": "^7.3.12",
     "axios": "^1.9.0",
     "clear": "^0.1.0",
+<<<<<<< HEAD
+    "expo": "^53.0.12",
+    "expo-auth-session": "~6.2.0",
+=======
     "expo": "~53.0.7",
     "expo-auth-session": "^6.1.5",
     "expo-image-picker": "^16.1.4",
+>>>>>>> b3a7b945df0e6ef77b5155beaa4bcdfa3bdf5b3b
     "expo-random": "^14.0.1",
     "expo-status-bar": "~2.2.3",
-    "expo-web-browser": "^14.1.6",
+    "expo-web-browser": "~14.2.0",
     "pfstore": "file:",
     "react": "19.0.0",
+<<<<<<< HEAD
+    "react-native": "^0.79.4",
+=======
     "react-native": "0.79.2",
     "react-native-dropdown-picker": "^5.4.6",
+>>>>>>> b3a7b945df0e6ef77b5155beaa4bcdfa3bdf5b3b
     "react-native-gesture-handler": "~2.24.0",
     "react-native-keyboard-aware-scroll-view": "^0.9.5",
     "react-native-reanimated": "~3.17.4",
     "react-native-safe-area-context": "^5.4.0",
-    "react-native-screens": "~4.10.0",
+    "react-native-screens": "~4.11.1",
     "react-native-swiper": "^1.6.0",
     "react-native-vector-icons": "^10.2.0"
   },
