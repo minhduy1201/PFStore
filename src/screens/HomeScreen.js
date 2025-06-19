@@ -55,7 +55,7 @@ export default function HomeScreen({ navigation }) {
           setCategories(res);
         }
       } catch (error) {
-        Alert.alert("Lỗi", "Đã xảy ra lỗi khi tải danh mục");
+        //Alert.alert("Lỗi", "Đã xảy ra lỗi khi tải danh mục");
         console.log("Load category error:", error);
       }
     };

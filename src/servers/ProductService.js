@@ -28,6 +28,7 @@ export const getProductById = async (productId) => {
   try {
     console.log("Đang lây sản phẩm từ Product");
     const res = await api.get(`/Products/${productId}`);
+    console.log(res.data);
     return res.data;
   } catch (err) {
     handleApiError(err, "Lỗi khi lây sản phẩm theo Id");
@@ -41,7 +42,7 @@ export const getProductByCatId = async (categoryId) => {
     const res = await api.get(`/Products/category/${categoryId}`);
     return res.data;
   } catch (err) {
-    handleApiError(err, "Lỗi khi lấy sản phẩm theo danh mục sản phẩm");
+    handleApiError("Lỗi khi lấy sản phẩm theo danh mục sản phẩm", err);
     return null;
   }
 };
