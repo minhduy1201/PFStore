@@ -1,19 +1,34 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, TextInput, TouchableOpacity, Alert, Modal, TouchableWithoutFeedback, Keyboard } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { get } from 'react-native/Libraries/TurboModule/TurboModuleRegistry';
-import { GetCategories } from '../servers/ProductService';
+import React, { useEffect, useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Image,
+  TextInput,
+  TouchableOpacity,
+  Alert,
+  Modal,
+  TouchableWithoutFeedback,
+  Keyboard,
+  Dimensions,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { GetCategories, getProducts } from "../servers/ProductService";
 
+const { width } = Dimensions.get("window");
+// Calculate card width for two columns with spacing and padding
+const cardWidth = (width - 16 * 2 - 10) / 2; // (screenWidth - horizontalPadding * 2 - spaceBetweenCards) / 2
 export default function HomeScreen({ navigation }) {
-    const [categories, setCategories] = useState([]);
-    const [products, setProducts] = useState([]);
-    const [keyword, setKeyword] = useState("");
-    const [showFilter, setShowFilter] = useState(false);
-    const [selectedBrands, setSelectedBrands] = useState([]);
-    const [selectedSizes, setSelectedSizes] = useState([]);
-    const [minPrice, setMinPrice] = useState('');
-    const [maxPrice, setMaxPrice] = useState('');
+  const [categories, setCategories] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [keyword, setKeyword] = useState("");
+  const [showFilter, setShowFilter] = useState(false);
+  const [selectedBrands, setSelectedBrands] = useState([]);
+  const [selectedSizes, setSelectedSizes] = useState([]);
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
 
   useEffect(() => {
     const checkLoginStatus = async () => {
@@ -38,11 +53,9 @@ export default function HomeScreen({ navigation }) {
         const res = await GetCategories();
         if (res && Array.isArray(res)) {
           setCategories(res);
-        } else {
-          Alert.alert("Lỗi", "Không thể tải danh mục sản phẩm");
         }
       } catch (error) {
-        Alert.alert("Lỗi", "Đã xảy ra lỗi khi tải danh mục");
+        //Alert.alert("Lỗi", "Đã xảy ra lỗi khi tải danh mục");
         console.log("Load category error:", error);
       }
     };
@@ -70,62 +83,65 @@ export default function HomeScreen({ navigation }) {
   };
 
   // Xử lý mở/đóng filter popupAdd commentMore actions
-    const toggleFilter = () => {
-        setShowFilter(!showFilter);
-    };
+  const toggleFilter = () => {
+    setShowFilter(!showFilter);
+  };
 
-    
-    // Xử lý nút thiết lập lại
-    const resetFilters = () => {
-      setSelectedBrands([]);
-      setSelectedSizes([]);
-      setMinPrice('');
-      setMaxPrice('');
-    };
-    
-    
-    // Xử lý áp dụng lọc
-    const applyFilter = () => {
-      // lọc sản phẩm theo các lựa chọn đã chọn
-      console.log('Applied Filters:', { selectedBrands, selectedSizes, minPrice, maxPrice });
-      setShowFilter(false);
-    };
+  // Xử lý nút thiết lập lại
+  const resetFilters = () => {
+    setSelectedBrands([]);
+    setSelectedSizes([]);
+    setMinPrice("");
+    setMaxPrice("");
+  };
 
-    // Hàm để toggle chọn thương hiệu
-    const toggleBrandSelection = (brand) => {
-        if (selectedBrands.includes(brand)) {
-            setSelectedBrands(selectedBrands.filter(b => b !== brand)); // Bỏ chọn nếu đã chọn
-        } else {
-            setSelectedBrands([...selectedBrands, brand]); // Thêm vào danh sách đã chọn
-        }
-    };
-    
-    // Hàm để toggle chọn size
-    const toggleSizeSelection = (size) => {
-          if (selectedSizes.includes(size)) {
-              setSelectedSizes(selectedSizes.filter(s => s !== size));  // Bỏ chọn size nếu đã chọn
-          } else {
-              setSelectedSizes([...selectedSizes, size]);  // Thêm size vào danh sách đã chọn
-          }
-      };
-  
+  // Xử lý áp dụng lọc
+  const applyFilter = () => {
+    // lọc sản phẩm theo các lựa chọn đã chọn
+    console.log("Applied Filters:", {
+      selectedBrands,
+      selectedSizes,
+      minPrice,
+      maxPrice,
+    });
+    setShowFilter(false);
+  };
+
+  // Hàm để toggle chọn thương hiệu
+  const toggleBrandSelection = (brand) => {
+    if (selectedBrands.includes(brand)) {
+      setSelectedBrands(selectedBrands.filter((b) => b !== brand)); // Bỏ chọn nếu đã chọn
+    } else {
+      setSelectedBrands([...selectedBrands, brand]); // Thêm vào danh sách đã chọn
+    }
+  };
+
+  // Hàm để toggle chọn size
+  const toggleSizeSelection = (size) => {
+    if (selectedSizes.includes(size)) {
+      setSelectedSizes(selectedSizes.filter((s) => s !== size)); // Bỏ chọn size nếu đã chọn
+    } else {
+      setSelectedSizes([...selectedSizes, size]); // Thêm size vào danh sách đã chọn
+    }
+  };
+
   return (
     <ScrollView style={styles.container}>
       {/* Thanh tìm kiếm */}
       <View style={styles.header}>
-  <Image
-    source={require('../../assets/images/logo.jpg')}
-    style={styles.logo}
-    resizeMode="contain"
-  />
-  <TextInput style={styles.searchInput} placeholder="Tìm kiếm sản phẩm" />
-  <TouchableOpacity onPress={handleSearch} style={styles.searchButton}>
-        <Ionicons name="search" size={24} color="black" />
-      </TouchableOpacity>
-  <TouchableOpacity onPress={toggleFilter}>
-    <Ionicons name="filter" size={24} color="black" />
-  </TouchableOpacity>
-</View>
+        <Image
+          source={require("../../assets/images/logo.jpg")}
+          style={styles.logo}
+          resizeMode="contain"
+        />
+        <TextInput style={styles.searchInput} placeholder="Tìm kiếm sản phẩm" />
+        <TouchableOpacity onPress={handleSearch} style={styles.searchButton}>
+          <Ionicons name="search" size={24} color="black" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={toggleFilter}>
+          <Ionicons name="filter" size={24} color="black" />
+        </TouchableOpacity>
+      </View>
 
       {/* Promotion Banner */}
       <View style={styles.banner}>
@@ -205,80 +221,97 @@ export default function HomeScreen({ navigation }) {
         </View>
       </View>
 
-    {/* Popup lọc sản phẩm */}
-    {showFilter && (
+      {/* Popup lọc sản phẩm */}
+      {showFilter && (
         <Modal
           transparent={true}
           animationType="slide"
           visible={showFilter}
-          onRequestClose={toggleFilter}>
+          onRequestClose={toggleFilter}
+        >
           <TouchableWithoutFeedback onPress={() => setShowFilter(false)}>
             <View style={styles.overlay}></View>
           </TouchableWithoutFeedback>
           <View style={styles.filterContainer}>
             <View style={styles.filterContent}>
-                <Text style={styles.filterTitle}>Lọc Sản Phẩm</Text>
+              <Text style={styles.filterTitle}>Lọc Sản Phẩm</Text>
 
-                {/* Thương hiệu */}
-                <Text style={styles.filterLabel}>Thương hiệu</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                                <View style={styles.categories}>
-                                    {categories.map((cat, index) => (
-                                        <TouchableOpacity
-                                            key={index}
-                                            style={[styles.categoryItem, selectedBrands.includes(cat.name) && styles.selectedCategory]}
-                                            onPress={() => toggleBrandSelection(cat.name)}>
-                                            <Text style={styles.categoryText}>{cat.name}</Text>
-                                        </TouchableOpacity>
-                                    ))}
-                                </View>
-                            </ScrollView>
-
-                {/* Size */}
-                <Text style={styles.filterLabel}>Size</Text>
+              {/* Thương hiệu */}
+              <Text style={styles.filterLabel}>Thương hiệu</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 <View style={styles.categories}>
-                                {['XS', 'S', 'M', 'L', 'XL', '2XL'].map((sizeOption, index) => (
-                                    <TouchableOpacity
-                                        key={index}
-                                        style={[styles.categoryItem, selectedSizes.includes(sizeOption) && styles.selectedCategory]}
-                                        onPress={() => toggleSizeSelection(sizeOption)}>
-                                        <Text style={styles.categoryText}>{sizeOption}</Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
-
-                {/* Giá */}
-                <Text style={styles.filterLabel}>Giá</Text>
-                <View style={styles.priceContainer}>
-                   <TextInput
-                       style={styles.filterInput}
-                       value={minPrice}
-                       onChangeText={setMinPrice}
-                       placeholder="Giá tối thiểu"
-                       keyboardType="numeric"
-                    />
-                    <TextInput
-                       style={styles.filterInput}
-                       value={maxPrice}
-                       onChangeText={setMaxPrice}
-                       placeholder="Giá tối đa"
-                       keyboardType="numeric"
-                    />
-                </View>
-
-                {/* Nút thiết lập lại và áp dụng */}
-                <View style={styles.buttonContainer}>
-                    <TouchableOpacity onPress={resetFilters} style={styles.buttonReset}>
-                        <Text style={styles.buttonText}>Thiết lập lại</Text>
+                  {categories.map((cat, index) => (
+                    <TouchableOpacity
+                      key={index}
+                      style={[
+                        styles.categoryItem,
+                        selectedBrands.includes(cat.name) &&
+                          styles.selectedCategory,
+                      ]}
+                      onPress={() => toggleBrandSelection(cat.name)}
+                    >
+                      <Text style={styles.categoryText}>{cat.name}</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={applyFilter} style={styles.buttonApply}>
-                         <Text style={styles.buttonText}>Áp dụng</Text>
-                    </TouchableOpacity>
+                  ))}
                 </View>
+              </ScrollView>
+
+              {/* Size */}
+              <Text style={styles.filterLabel}>Size</Text>
+              <View style={styles.categories}>
+                {["XS", "S", "M", "L", "XL", "2XL"].map((sizeOption, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={[
+                      styles.categoryItem,
+                      selectedSizes.includes(sizeOption) &&
+                        styles.selectedCategory,
+                    ]}
+                    onPress={() => toggleSizeSelection(sizeOption)}
+                  >
+                    <Text style={styles.categoryText}>{sizeOption}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Giá */}
+              <Text style={styles.filterLabel}>Giá</Text>
+              <View style={styles.priceContainer}>
+                <TextInput
+                  style={styles.filterInput}
+                  value={minPrice}
+                  onChangeText={setMinPrice}
+                  placeholder="Giá tối thiểu"
+                  keyboardType="numeric"
+                />
+                <TextInput
+                  style={styles.filterInput}
+                  value={maxPrice}
+                  onChangeText={setMaxPrice}
+                  placeholder="Giá tối đa"
+                  keyboardType="numeric"
+                />
+              </View>
+
+              {/* Nút thiết lập lại và áp dụng */}
+              <View style={styles.buttonContainer}>
+                <TouchableOpacity
+                  onPress={resetFilters}
+                  style={styles.buttonReset}
+                >
+                  <Text style={styles.buttonText}>Thiết lập lại</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={applyFilter}
+                  style={styles.buttonApply}
+                >
+                  <Text style={styles.buttonText}>Áp dụng</Text>
+                </TouchableOpacity>
+              </View>
             </View>
-        </View>
-    </Modal>
-    )}
+          </View>
+        </Modal>
+      )}
     </ScrollView>
   );
 }
@@ -345,108 +378,55 @@ const styles = StyleSheet.create({
     color: "#333",
   },
 
-    productCard: {
-      width: 120,
-      marginRight: 16,
-    },
-    productImage: {
-      width: '100%',
-      height: 100,
-      borderRadius: 10,
-      backgroundColor: '#eee',
-    },
-    productTitle: {
-      marginTop: 5,
-      fontSize: 14,
-    },
-    productPrice: {
-      fontWeight: 'bold',
-      marginTop: 2,
-    },
-    logo: {
-        width: 32,
-        height: 32,
-      },
-
-// Thêm style cho phần mới
-
-searchInput: {
+  // --- New Styles for Products Grid ---
+  productsGridContainer: {
+    flexDirection: "row", // Arrange items in a row
+    flexWrap: "wrap", // Allow items to wrap to the next line
+    justifyContent: "space-between", // Distribute space between items
+  },
+  productCard: {
     borderWidth: 1,
-    borderColor: "#ccc",
-    padding: 10,
-    borderRadius: 5,
+    borderColor: "#f0f0f0",
+    backgroundColor: "#f0f0f0",
+    borderRadius: 15,
+    width: cardWidth, // Use the calculated cardWidth
+    marginBottom: 10, // Space between rows
+    padding: 8,
+    height: 220, // Adjusted height to accommodate image and text better
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    overflow: "hidden",
   },
-  searchButton: {
-    marginTop: 10,
-    padding: 10,
-    backgroundColor: "#4CAF50",
-    borderRadius: 5,
-    alignItems: "center",
+  productImage: {
+    width: "100%",
+    height: cardWidth - 16, // Keep aspect ratio, subtract padding
+    borderRadius: 10,
+    backgroundColor: "#eee",
+    marginBottom: 6,
+    resizeMode: "cover",
   },
-
-overlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    },
-    filterContainer: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        backgroundColor: '#fff',
-        padding: 20,
-        borderTopLeftRadius: 10,
-        borderTopRightRadius: 10,
-    },
-    filterContent: {
-        padding: 10,
-    },
-    filterTitle: {
-        fontSize: 20,
-        fontWeight: '600',
-        marginBottom: 20,
-    },
-    filterLabel: {
-        fontSize: 16,
-        marginVertical: 10,
-    },
-    filterInput: {
-        borderWidth: 1,
-        borderColor: '#ccc',
-        borderRadius: 5,
-        padding: 10,
-        marginBottom: 10,
-    },
-    selectedCategory: {
-        backgroundColor: '#4CAF50',
-    },
-    selectedCategory: {
-        backgroundColor: '#4CAF50',
-    },
-    priceContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-    },
-    buttonContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginTop: 20,
-    },
-    buttonReset: {
-        backgroundColor: '#ccc',
-        padding: 10,
-        borderRadius: 5,
-        width: '48%',
-    },
-    buttonApply: {
-        backgroundColor: '#4CAF50',
-        padding: 10,
-        borderRadius: 5,
-        width: '48%',
-    },
-    buttonText: {
-        color: '#fff',
-        textAlign: 'center',
-    },      
-
-  });
+  productInfo: {
+    flex: 1,
+    justifyContent: "space-between",
+    width: "100%",
+  },
+  productTitle: {
+    fontSize: 13,
+    fontWeight: "600",
+    marginBottom: 1,
+    color: "#333",
+    lineHeight: 18,
+    // Add these two lines to limit text to two lines
+    maxHeight: 36, // Approx height for 2 lines (18 * 2)
+    overflow: "hidden",
+  },
+  productPrice: {
+    fontSize: 14,
+    fontWeight: "bold",
+    marginTop: 1,
+  },
+  logo: {
+    width: 32,
+    height: 32,
+  },
+});
