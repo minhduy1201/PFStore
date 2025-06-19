@@ -8,17 +8,33 @@ export const fetchProfileData = async (userId) => {
     const realData = response.data?.data || response.data;
     console.log("Đã lấy dữ liệu hồ sơ từ server:", realData);
 
+    const defaultAddress = realData.defaultAddress ?? {};
+
     return {
       fullName: realData.fullName ?? "",
       email: realData.email ?? "",
       soDienThoai: realData.phoneNumber ?? "",
       avatarUrl: realData.avatarUrl ?? "",
       gioiTinh: realData.gender ?? "",
-      ngaySinh: realData.birthday ?? "", // dạng "YYYY-MM-DD"
+      ngaySinh: realData.birthday ?? "",
+
       diaChi: {
-        tenDuong: realData.addressLine ?? "",
-        thanhPho: realData.city ?? ""
-      }
+        tenDuong: defaultAddress.houseNumberAndStreet ?? "",
+        xa: defaultAddress.ward ?? "",
+        huyen: defaultAddress.district ?? "",
+        thanhPho: defaultAddress.city ?? "",
+      },
+
+      // Nếu bạn cần toàn bộ danh sách địa chỉ
+      danhSachDiaChi: (realData.addresses ?? []).map((addr) => ({
+        id: addr.addressId,
+        tenDuong: addr.houseNumberAndStreet ?? "",
+        xa: addr.ward ?? "",
+        huyen: addr.district ?? "",
+        thanhPho: addr.city ?? "",
+        isDefault: addr.isDefault ?? false,
+        fullDiaChi: addr.fullAddress ?? "",
+      })),
     };
   } catch (error) {
     console.error("Lỗi khi lấy dữ liệu hồ sơ từ server:", error);
@@ -26,34 +42,71 @@ export const fetchProfileData = async (userId) => {
     throw error;
   }
 };
-
-export const updateProfileData = async (userId, profileData) => {
+/**
+ * Cập nhật thông tin cá nhân (họ tên, sdt, giới tính, ngày sinh)
+ */
+export const updateUserInfo = async (userId, updateData) => {
   try {
-    const dataToSend = {
-      userId: userId,
-      fullName: profileData.fullName,
-      phoneNumber: profileData.soDienThoai,
-      email: profileData.email,
-      avatarUrl: profileData.avatarUrl,
-      gender: profileData.gioiTinh ?? null,
-      birthday: profileData.ngaySinh ?? null, // "YYYY-MM-DD"
-      addressLine: profileData.diaChi?.tenDuong ?? "",
-      city: profileData.diaChi?.thanhPho ?? ""
-    };
-
-    const response = await api.put(`/Profile/${userId}`, dataToSend);
-
-    return {
-      message: "Cập nhật hồ sơ thành công!",
-      status: response.status,
-    };
+    await api.put(`/Profile/${userId}/info`, updateData);
+    Alert.alert("Thành công", "Thông tin cá nhân đã được cập nhật.");
   } catch (error) {
-    console.error("Lỗi khi cập nhật profile:", error);
-    handleApiError(error, "Cập nhật hồ sơ thất bại.");
+    console.error("Lỗi khi cập nhật thông tin cá nhân:", error);
+    handleApiError(error, "Cập nhật thông tin thất bại.");
+  }
+};
+
+/**
+ * Cập nhật avatar người dùng
+ */
+export const uploadUserAvatar = async (userId, imageFile) => {
+  try {
+    const formData = new FormData();
+    formData.append("avatar", {
+      uri: imageFile.uri,
+      name: imageFile.name || "avatar.jpg",
+      type: imageFile.type || "image/jpeg",
+    });
+
+    const response = await api.post(`/Profile/${userId}/avatar`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+
+    const avatarUrl = response.data.avatarUrl;
+    Alert.alert("Thành công", "Avatar đã được cập nhật.");
+    return avatarUrl;
+  } catch (error) {
+    console.error("Lỗi khi cập nhật avatar:", error);
+    handleApiError(error, "Cập nhật avatar thất bại.");
     throw error;
   }
 };
 
+// export const updateProfileData = async (userId, profileData) => {
+//   try {
+//     const dataToSend = {
+//       userId: userId,
+//       fullName: profileData.fullName,
+//       phoneNumber: profileData.soDienThoai,
+//       email: profileData.email,
+//       avatarUrl: profileData.avatarUrl,
+//       gender: profileData.gioiTinh ?? null,
+//       birthday: profileData.ngaySinh ?? null, // "YYYY-MM-DD"
+//       addressLine: profileData.diaChi?.tenDuong ?? "",
+//       city: profileData.diaChi?.thanhPho ?? ""
+//     };
+
+//     const response = await api.put(`/Profile/${userId}`, dataToSend);
+
+//     return {
+//       message: "Cập nhật hồ sơ thành công!",
+//       status: response.status,
+//     };
+//   } catch (error) {
+//     console.error("Lỗi khi cập nhật profile:", error);
+//     handleApiError(error, "Cập nhật hồ sơ thất bại.");
+//     throw error;
+//   }
+// };
 
 // --- Dữ liệu giả lập cho Profile ---
 // Tên các trường ở đây sẽ khớp với tên mà frontend mong muốn

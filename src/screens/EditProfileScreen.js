@@ -11,17 +11,24 @@ import {
   ActivityIndicator,
   Alert,
   SafeAreaView,
+  Modal,
 } from "react-native";
 import { MaterialIcons, MaterialCommunityIcons } from "@expo/vector-icons";
 import DropDownPicker from "react-native-dropdown-picker";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
+import * as ImagePicker from "expo-image-picker";
 
 import {
   fetchProfileData,
   updateProfileData,
   changeUserPassword,
+  uploadUserAvatar,
 } from "../servers/ProfileService";
-import { getProvinces, getDistricts, getWards } from "../servers/LocationService";
+import {
+  getProvinces,
+  getDistricts,
+  getWards,
+} from "../servers/LocationService";
 
 const EditProfileScreen = ({ navigation, route }) => {
   // Lấy userId từ params hoặc context/store
@@ -53,32 +60,59 @@ const EditProfileScreen = ({ navigation, route }) => {
   const [districtItems, setDistrictItems] = useState([]);
   const [wardItems, setWardItems] = useState([]);
 
-  //Hàm render
-  useEffect(() => {
-    const loadProfile = async () => {
+  // Địa chỉ
+  const [fullDiaChi, setFullDiaChi] = useState([]); // Danh sách địa chỉ
+  const [editingAddress, setEditingAddress] = useState(null); // Địa chỉ đang chỉnh sửa
+  const [showAddressPanel, setShowAddressPanel] = useState(false); // Hiển thị panel thêm/sửa địa chỉ
+
+  const [avatarUrl, setAvatarUrl] = useState(profileData?.avatarUrl);
+
+  const handlePickAvatar = async () => {
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      const image = result.assets[0];
       try {
-        setLoading(true);
-        setError(null);
-        const data = await fetchProfileData(userId);
-        setProfileData(data);
-
-        // Nếu có city, tìm code tương ứng để set cho provinceValue
-        if (data.diaChi?.thanhPho) {
-          const provinces = await getProvinces();
-          const foundProvince = provinces.find(
-            (p) => p.name === data.diaChi.thanhPho
-          );
-          if (foundProvince) setProvinceValue(foundProvince.code);
-        }
-        // Nếu có thể, bạn cũng có thể set districtValue, wardValue tương tự
+        const uploadedUrl = await uploadUserAvatar(userId, image);
+        setAvatarUrl(uploadedUrl);
+        // Cập nhật lại profileData nếu cần
+        setProfileData((prev) => ({ ...prev, avatarUrl: uploadedUrl }));
       } catch (err) {
-        setError("Không thể tải dữ liệu hồ sơ.");
-        console.error("Lỗi khi tải dữ liệu trong EditProfileScreen:", err);
-      } finally {
-        setLoading(false);
+        Alert.alert("Lỗi", "Không thể upload ảnh đại diện.");
       }
-    };
+    }
+  };
 
+  const loadProfile = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await fetchProfileData(userId);
+      console.log("Dữ liệu hồ sơ:", data);
+      setProfileData(data);
+
+      // Nếu có city, tìm code tương ứng để set cho provinceValue
+      if (data.diaChi?.thanhPho) {
+        const provinces = await getProvinces();
+        const foundProvince = provinces.find(
+          (p) => p.name === data.diaChi.thanhPho
+        );
+        if (foundProvince) setProvinceValue(foundProvince.code);
+      }
+    } catch (err) {
+      setError("Không thể tải dữ liệu hồ sơ.");
+      console.error("Lỗi khi tải dữ liệu trong EditProfileScreen:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     loadProfile();
   }, []);
 
@@ -187,6 +221,32 @@ const EditProfileScreen = ({ navigation, route }) => {
     }
   };
 
+  // --- Hàm xử lý lưu địa chỉ ---
+  const handleSaveAddress = async () => {
+    if (!editingAddress) return; // Không có địa chỉ để lưu
+
+    setLoading(true);
+    try {
+      // Gọi API cập nhật địa chỉ ở đây
+      // Ví dụ: await updateAddressAPI(editingAddress);
+      // Cập nhật lại danh sách địa chỉ sau khi lưu thành công
+      // setFullDiaChi(updatedAddressList);
+      setShowAddressPanel(false); // Đóng panel sau khi lưu
+    } catch (err) {
+      console.error("Lỗi lưu địa chỉ trong EditProfileScreen:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // --- Hàm xử lý thay đổi địa chỉ (trong panel thêm/sửa địa chỉ) ---
+  const handleEditingAddressChange = (field, value) => {
+    setEditingAddress((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
   // --- Conditional Rendering: Hiển thị trạng thái loading hoặc lỗi ---
   if (loading && !profileData) {
     // Chỉ hiển thị loading lúc ban đầu khi profileData chưa có
@@ -199,7 +259,6 @@ const EditProfileScreen = ({ navigation, route }) => {
   }
 
   if (error) {
-    // Nếu có lỗi sau khi tải ban đầu
     return (
       <View style={styles.errorContainer}>
         <Text style={styles.errorText}>{error}</Text>
@@ -250,15 +309,24 @@ const EditProfileScreen = ({ navigation, route }) => {
         extraScrollHeight={100}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Phần Avatar */}
         <View style={styles.avatarContainer}>
-          <Image
-            source={{ uri: profileData.avatarUrl }}
-            style={styles.avatar}
-          />
-          <TouchableOpacity style={styles.updateAvatarButton}>
-            <Text style={styles.updateAvatarText}>update</Text>
+          <TouchableOpacity onPress={handlePickAvatar}>
+            <Image
+              source={
+                profileData.avatarUrl
+                  ? { uri: profileData.avatarUrl }
+                  : 'https://i.pinimg.com/736x/8f/1c/a2/8f1ca2029e2efceebd22fa05cca423d7.jpg'
+              }
+              style={styles.avatarPlaceholder}
+            />
+            <Text style={styles.fullNameText}>{profileData.fullName}</Text>
           </TouchableOpacity>
+          {/* <TouchableOpacity
+            style={styles.updateAvatarButton}
+            onPress={handlePickAvatar}
+          >
+            <Text style={styles.updateAvatarText}>update</Text>
+          </TouchableOpacity> */}
         </View>
 
         {/* --- Thông tin tài khoản --- */}
@@ -266,21 +334,33 @@ const EditProfileScreen = ({ navigation, route }) => {
         <View style={styles.formSection}>
           <View style={styles.row}>
             <View style={styles.inputGroupHalf}>
-              <Text style={styles.inputLabel}>HỌ</Text>
+              {/* <Text style={styles.inputLabel}>HỌ</Text> */}
               <TextInput
                 style={styles.input}
                 value={ho}
                 onChangeText={(text) => handleProfileDataChange("ho", text)}
                 placeholder="Nhập họ"
               />
+              <TextInput
+                style={styles.input}
+                value={profileData.gioiTinh}
+                onChangeText={(text) => handleProfileDataChange("gioiTinh", text)}
+                placeholder="Nhập họ"
+              />
             </View>
             <View style={styles.inputGroupHalf}>
-              <Text style={styles.inputLabel}>TÊN</Text>
+              {/* <Text style={styles.inputLabel}>TÊN</Text> */}
               <TextInput
                 style={styles.input}
                 value={ten}
                 onChangeText={(text) => handleProfileDataChange("ten", text)}
                 placeholder="Nhập tên"
+              />
+              <TextInput
+                style={styles.input}
+                value={profileData.ngaySinh}
+                onChangeText={(text) => handleProfileDataChange("ngaySinh", text)}
+                placeholder="Ngày sinh (YYYY-MM-DD)"
               />
             </View>
           </View>
@@ -292,122 +372,179 @@ const EditProfileScreen = ({ navigation, route }) => {
               onChangeText={(text) => handleProfileDataChange("email", text)}
               placeholder="Email"
               keyboardType="email-address"
-              editable={false} // Thường email không cho chỉnh sửa sau khi đăng ký
+              editable={false}
             />
-          </View>
-
-          <View style={styles.inputGroupFull}>
-            <TextInput
+             <TextInput
               style={styles.input}
               value={profileData.soDienThoai}
-              onChangeText={(text) =>
-                handleProfileDataChange("soDienThoai", text)
-              }
-              placeholder="Số điện thoại"
-              keyboardType="phone-pad"
+              onChangeText={(text) => handleProfileDataChange("soDienThoai", text)}
+              placeholder=""
+              keyboardType="email-address"
+              editable={false}
             />
+            
           </View>
+       
         </View>
-
-        {/* --- Địa chỉ --- */}
-        <Text style={styles.sectionTitle}>Địa chỉ</Text>
-        <View style={styles.formSection}>
-          {/* Placeholder Bản đồ */}
-          <View style={styles.mapPlaceholderContainer}>
-            <Image
-              source={{ uri: profileData.mapImageUrl }}
-              style={styles.mapPlaceholder}
-            />
-          </View>
-
-          <View style={styles.row}>
-            <View style={styles.inputGroupHalf}>
-              <Text style={styles.inputLabel}>TỈNH/THÀNH PHỐ</Text>
-              <DropDownPicker
-                open={provinceOpen}
-                value={provinceValue}
-                items={provinceItems}
-                setOpen={setProvinceOpen}
-                setValue={setProvinceValue}
-                setItems={setProvinceItems}
-                placeholder="Chọn tỉnh/thành phố"
-                style={styles.dropdown}
-                textStyle={styles.dropdownText}
-                dropDownContainerStyle={styles.dropdownBox}
-                zIndex={3000}
-                zIndexInverse={1000}
-              />
-            </View>
-            <View style={styles.inputGroupHalf}>
-              <Text style={styles.inputLabel}>QUẬN/HUYỆN</Text>
-              <DropDownPicker
-                open={districtOpen}
-                value={districtValue}
-                items={districtItems}
-                setOpen={setDistrictOpen}
-                setValue={setDistrictValue}
-                setItems={setDistrictItems}
-                placeholder="Chọn quận/huyện"
-                disabled={!provinceValue}
-                style={styles.dropdown}
-                textStyle={styles.dropdownText}
-                dropDownContainerStyle={styles.dropdownBox}
-                zIndex={2000}
-                zIndexInverse={2000}
-              />
-            </View>
-          </View>
-
-          <View style={styles.row}>
-            <View style={styles.inputGroupHalf}>
-              <Text style={styles.inputLabel}>XÃ/PHƯỜNG</Text>
-              <DropDownPicker
-                open={wardOpen}
-                value={wardValue}
-                items={wardItems}
-                setOpen={setWardOpen}
-                setValue={setWardValue}
-                setItems={setWardItems}
-                placeholder="Chọn xã/phường"
-                disabled={!districtValue}
-                style={styles.dropdown}
-                textStyle={styles.dropdownText}
-                dropDownContainerStyle={styles.dropdownBox}
-                zIndex={1000}
-                zIndexInverse={3000}
-              />
-            </View>
-            <View style={styles.inputGroupHalf}>
-              <Text style={styles.inputLabel}>TÊN ĐƯỜNG, SỐ NHÀ</Text>
-              <TextInput
-                style={styles.input}
-                value={profileData.diaChi.tenDuong}
-                onChangeText={(text) =>
-                  handleProfileDataChange("diaChi.tenDuong", text)
-                }
-                placeholder="Tên đường, số nhà"
-              />
-            </View>
-          </View>
-        </View>
-
-        {/* Nút Cập Nhật */}
         <TouchableOpacity
           style={styles.primaryButton}
           onPress={handleUpdateProfile}
           disabled={loading}
         >
-          <Text style={styles.primaryButtonText}>
-            Cập Nhật
+          <View>
+            <Text style={styles.primaryButtonText}>Cập Nhật</Text>
             {loading && (
-              <ActivityIndicator
-                size="small"
-                color="#fff"
-                style={{ marginLeft: 10 }}
-              />
+              <ActivityIndicator />
             )}
-          </Text>
+          </View>
         </TouchableOpacity>
+
+        {/* --- Địa chỉ --- */}
+        <Text style={styles.sectionTitle}>Địa chỉ</Text>
+
+        {/* Danh sách địa chỉ */}
+        {Array.isArray(profileData.danhSachDiaChi) &&
+          profileData.danhSachDiaChi.map((item) => (
+            <TouchableOpacity
+              key={item.id}
+              style={[
+                styles.addressItem,
+                item.isDefault && styles.selectedAddress,
+              ]}
+              onPress={() => {
+                setEditingAddress(item);
+                setShowAddressPanel(true);
+              }}
+            >
+              <Text style={styles.addressText}>{item.fullDiaChi}</Text>
+              {item.isDefault && <Text style={styles.defaultLabel}>✓</Text>}
+            </TouchableOpacity>
+          ))}
+
+        {/* Nút thêm địa chỉ mới */}
+        <TouchableOpacity
+          style={styles.primaryButton}
+          onPress={() => {
+            setEditingAddress(null);
+            setShowAddressPanel(true);
+          }}
+        >
+          <Text style={styles.primaryButtonText}>+ Thêm địa chỉ mới</Text>
+        </TouchableOpacity>
+
+        {/* Popup panel thêm/sửa địa chỉ */}
+        {showAddressPanel && (
+          <Modal
+            visible={showAddressPanel}
+            animationType="slide"
+            transparent={true}
+            onRequestClose={() => setShowAddressPanel(false)}
+          >
+            <View style={styles.overlay}>
+              <View style={styles.popupPanel}>
+                <View style={styles.formSectionColumn}>
+                  {/* Placeholder Bản đồ */}
+                  <View style={styles.mapPlaceholderContainer}>
+                    <Image
+                      source={{ uri: profileData.mapImageUrl }}
+                      style={styles.mapPlaceholder}
+                    />
+                  </View>
+
+                  {/* TỈNH/THÀNH PHỐ */}
+                  <Text style={styles.inputLabel}>TỈNH/THÀNH PHỐ</Text>
+                  <DropDownPicker
+                    open={provinceOpen}
+                    value={provinceValue}
+                    items={provinceItems}
+                    setOpen={setProvinceOpen}
+                    setValue={setProvinceValue}
+                    setItems={setProvinceItems}
+                    placeholder="Chọn tỉnh/thành phố"
+                    style={styles.dropdown}
+                    textStyle={styles.dropdownText}
+                    dropDownContainerStyle={styles.dropdownBox}
+                    zIndex={3000}
+                    zIndexInverse={1000}
+                  />
+
+                  {/* QUẬN/HUYỆN */}
+                  <Text style={styles.inputLabel}>QUẬN/HUYỆN</Text>
+                  <DropDownPicker
+                    open={districtOpen}
+                    value={districtValue}
+                    items={districtItems}
+                    setOpen={setDistrictOpen}
+                    setValue={setDistrictValue}
+                    setItems={setDistrictItems}
+                    placeholder="Chọn quận/huyện"
+                    disabled={!provinceValue}
+                    style={styles.dropdown}
+                    textStyle={styles.dropdownText}
+                    dropDownContainerStyle={styles.dropdownBox}
+                    zIndex={2000}
+                    zIndexInverse={2000}
+                  />
+
+                  {/* XÃ/PHƯỜNG */}
+                  <Text style={styles.inputLabel}>XÃ/PHƯỜNG</Text>
+                  <DropDownPicker
+                    open={wardOpen}
+                    value={wardValue}
+                    items={wardItems}
+                    setOpen={setWardOpen}
+                    setValue={setWardValue}
+                    setItems={setWardItems}
+                    placeholder="Chọn xã/phường"
+                    disabled={!districtValue}
+                    style={styles.dropdown}
+                    textStyle={styles.dropdownText}
+                    dropDownContainerStyle={styles.dropdownBox}
+                    zIndex={1000}
+                    zIndexInverse={3000}
+                  />
+
+                  {/* TÊN ĐƯỜNG, SỐ NHÀ */}
+                  <Text style={styles.inputLabel}>TÊN ĐƯỜNG, SỐ NHÀ</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={editingAddress?.tenDuong || ""}
+                    onChangeText={(text) =>
+                      handleEditingAddressChange("tenDuong", text)
+                    }
+                    placeholder="Tên đường, số nhà"
+                  />
+
+                  {/* Nhóm nút lưu + hủy */}
+                  <View style={styles.buttonRow}>
+                    <TouchableOpacity
+                      style={[styles.addButton, loading && styles.disabled]}
+                      onPress={handleSaveAddress}
+                      disabled={loading}
+                    >
+                      <Text style={styles.primaryButtonText}>
+                        {editingAddress ? "Cập nhật" : "Thêm mới"}
+                      </Text>
+                      {loading && (
+                        <ActivityIndicator
+                          size="small"
+                          color="#fff"
+                          style={{ marginLeft: 10 }}
+                        />
+                      )}
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.cancelButton}
+                      onPress={() => setShowAddressPanel(false)}
+                    >
+                      <Text style={styles.cancelButtonText}>Hủy</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+            </View>
+          </Modal>
+        )}
 
         {/* --- Thay đổi mật khẩu --- */}
         <Text style={styles.sectionTitle}>Thay đổi mật khẩu</Text>
@@ -485,16 +622,24 @@ const EditProfileScreen = ({ navigation, route }) => {
           onPress={handleChangePassword}
           disabled={loading}
         >
-          <Text style={styles.primaryButtonText}>
-            Đổi Mật Khẩu
+          <View
+            style={[
+              {
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+              },
+            ]}
+          >
+            <Text style={styles.primaryButtonText}>
+              {loading ? "Đang đổi mật khẩu..." : "Đổi Mật Khẩu"}
+            </Text>
             {loading && (
-              <ActivityIndicator
-                size="small"
-                color="#fff"
-                style={{ marginLeft: 10 }}
-              />
+              <View style={{ marginLeft: 10 }}>
+                <ActivityIndicator size="small" color="#fff" />
+              </View>
             )}
-          </Text>
+          </View>
         </TouchableOpacity>
       </KeyboardAwareScrollView>
     </SafeAreaView>
@@ -544,7 +689,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 15,
     paddingVertical: 10,
-    backgroundColor: "#fff",
+    backgroundColor: "#f8f8f8",
     borderBottomWidth: 1,
     borderBottomColor: "#eee",
     paddingTop: Platform.OS === "android" ? 35 : 0,
@@ -557,6 +702,9 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
     color: "#333",
+    flex: 1,
+    textAlign: "center",
+    marginLeft: -20,
   },
   scrollViewContent: {
     paddingBottom: 40,
@@ -590,7 +738,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
     color: "#333",
-    marginLeft: 20,
+    marginLeft: 10,
     marginTop: 20,
     marginBottom: 10,
   },
@@ -614,9 +762,11 @@ const styles = StyleSheet.create({
   inputGroupHalf: {
     flex: 1,
     marginRight: 10,
+    marginHorizontal: 10,
   },
   inputGroupFull: {
     marginBottom: 10,
+    marginHorizontal: 10,
   },
   inputLabel: {
     fontSize: 10,
@@ -641,10 +791,13 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     marginBottom: 15,
   },
-  mapPlaceholder: {
-    width: "100%",
-    height: "100%",
+  avatarPlaceholder: {
+    width: 100,
+    height: 100,
     resizeMode: "cover",
+    backgroundColor: "#f0f0f0",
+    borderRadius: 50,
+  
   },
   primaryButton: {
     backgroundColor: "#323660",
@@ -670,6 +823,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#f9f9f9",
     marginBottom: 10,
     paddingRight: 12,
+    marginHorizontal: 10,
   },
   passwordInput: {
     flex: 1,
@@ -711,14 +865,157 @@ const styles = StyleSheet.create({
     borderColor: "#e0e0e0",
     borderRadius: 8,
     minHeight: 44,
-    marginBottom: 8,
+    marginBottom: 4,
     backgroundColor: "#fafbfc",
   },
-  dropdownText: { fontSize: 15, color: "#333" },
+  dropdownText: {
+    fontSize: 15,
+    color: "#333",
+  },
   dropdownBox: {
     borderColor: "#e0e0e0",
     borderRadius: 8,
     backgroundColor: "#fff",
+  },
+  // Styles cho địa chỉ
+  addressItem: {
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    padding: 15,
+    marginBottom: 10,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#eee",
+  },
+  selectedAddress: {
+    borderColor: "#4472C4",
+    borderWidth: 1.5,
+    padding: 16,
+    margin: 16,
+  },
+  addressText: {
+    fontSize: 15,
+    color: "#333",
+    flex: 1,
+  },
+  defaultLabel: {
+    fontSize: 12,
+    color: "#4CAF50",
+    fontWeight: "bold",
+    marginLeft: 10,
+  },
+  addButton: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 12,
+    backgroundColor: "#323660",
+    borderRadius: 8,
+  },
+
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.25)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  popupPanel: {
+    width: "94%",
+    height: "92%",
+    backgroundColor: "#fff",
+    borderRadius: 18,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 8,
+    justifyContent: "flex-start",
+  },
+  formSection: {
+    flex: 1,
+    justifyContent: "flex-start",
+  },
+  mapPlaceholderContainer: {
+    alignItems: "center",
+    marginBottom: 18,
+  },
+  mapPlaceholder: {
+    width: "100%",
+    height: 120,
+    borderRadius: 10,
+    backgroundColor: "#111",
+  },
+  row: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+  inputGroupHalf: {
+    flex: 1,
+    marginHorizontal: 4,
+    marginHorizontal: 10,
+  },
+  inputLabel: {
+    fontSize: 14,
+    color: "#444",
+    fontWeight: "500",
+    marginBottom: 6,
+    marginLeft: 2,
+  },
+  buttonRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 12,
+    marginTop: 16,
+  },
+  dropdown: {
+    borderColor: "#e0e0e0",
+    borderRadius: 8,
+    minHeight: 44,
+    marginBottom: 4,
+    backgroundColor: "#fafbfc",
+  },
+  dropdownText: {
+    fontSize: 15,
+    color: "#333",
+  },
+  dropdownBox: {
+    borderColor: "#e0e0e0",
+    borderRadius: 8,
+    backgroundColor: "#fff",
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: "#e0e0e0",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 15,
+    backgroundColor: "#fafbfc",
+    marginBottom: 4,
+    marginTop: 2,
+  },
+  fullNameText:{
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#333",
+    marginTop: 10,
+    textAlign: "center",
+  },
+  cancelButton: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 12,
+    backgroundColor: "#E0E0E0",
+    borderRadius: 8,
+  },
+  cancelButtonText: {
+    color: "#333",
+  },
+  disabled: {
+    opacity: 0.6,
   },
 });
 
