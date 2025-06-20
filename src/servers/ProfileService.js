@@ -19,6 +19,8 @@ export const fetchProfileData = async (userId) => {
       ngaySinh: realData.birthday ?? "",
 
       diaChi: {
+        tenNguoiNhan: realData.defaultAddress?.fullName ?? "",
+        soDienThoaiNN: realData.defaultAddress?.phoneNumber ?? "",
         tenDuong: defaultAddress.houseNumberAndStreet ?? "",
         xa: defaultAddress.ward ?? "",
         huyen: defaultAddress.district ?? "",
@@ -34,6 +36,8 @@ export const fetchProfileData = async (userId) => {
         thanhPho: addr.city ?? "",
         isDefault: addr.isDefault ?? false,
         fullDiaChi: addr.fullAddress ?? "",
+        tenNguoiNhan: addr.fullName ?? "",
+        soDienThoaiNN: addr.phoneNumber ?? "",
       })),
     };
   } catch (error) {
@@ -91,6 +95,7 @@ export const uploadUserAvatar = async (userId, imageFile) => {
     throw error;
   }
 };
+
 
 // export const updateProfileData = async (userId, profileData) => {
 //   try {

@@ -12,11 +12,20 @@ import {
   Alert,
   SafeAreaView,
   Modal,
+  Switch,
 } from "react-native";
+import {
+  getUserAddresses,
+  addUserAddress,
+  updateUserAddress,
+  deleteUserAddress,
+  setDefaultAddress,
+} from "../servers/AddressService";
 import { MaterialIcons, MaterialCommunityIcons } from "@expo/vector-icons";
 import DropDownPicker from "react-native-dropdown-picker";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import * as ImagePicker from "expo-image-picker";
+
 
 import {
   fetchProfileData,
@@ -29,6 +38,8 @@ import {
   getDistricts,
   getWards,
 } from "../servers/LocationService";
+import { changePassword } from "../servers/AuthenticationService";
+import BirthdayPicker from "./BirthdayPicker";
 
 const EditProfileScreen = ({ navigation, route }) => {
   // Lấy userId từ params hoặc context/store
@@ -74,7 +85,10 @@ const EditProfileScreen = ({ navigation, route }) => {
 
   const [avatarUrl, setAvatarUrl] = useState(profileData?.avatarUrl);
 
-  //hàm chọn ảnh đại diện
+  const defaultBirthday = "01-01-2000";
+  const [ngaySinh, setNgaySinh] = useState(defaultBirthday);
+
+  // hàm chọn ảnh đại diện
   const handlePickAvatar = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -95,12 +109,12 @@ const EditProfileScreen = ({ navigation, route }) => {
       }
     }
   };
-
   useEffect(() => {
     if (genderValue) {
       handleProfileDataChange("gioiTinh", genderValue);
     }
   }, [genderValue]);
+  
   // Hàm tải dữ liệu hồ sơ
   const loadProfile = async () => {
     try {
@@ -198,15 +212,13 @@ const EditProfileScreen = ({ navigation, route }) => {
       Alert.alert("Lỗi", "Vui lòng nhập đầy đủ họ tên và số điện thoại.");
       return;
     }
-   const payload = {
-  fullName: `${ho} ${ten}`.trim(),
-  phoneNumber: profileData.soDienThoai,
-  gender: profileData.gioiTinh,
-};
-
-if (profileData.ngaySinh?.trim()) {
-  payload.birthday = profileData.ngaySinh;
-}
+    const payload = {
+      fullName: profileData.fullName,
+      phoneNumber: profileData.soDienThoai,
+      gender: profileData.gioiTinh,
+      birthday: formatDateToISO(profileData.ngaySinh), // Đảm bảo đúng YYYY-MM-DD
+    };
+    await updateUserInfo(userId, payload);
 
     console.log("Payload gửi đi:", payload);
     setLoading(true);
@@ -231,7 +243,7 @@ if (profileData.ngaySinh?.trim()) {
 
     setLoading(true);
     try {
-      const response = await changeUserPassword(oldPassword, newPassword);
+      const response = await changePassword(oldPassword, newPassword);
       Alert.alert("Thành công", response.message || "Mật khẩu đã được đổi!");
       // Xóa các trường mật khẩu sau khi đổi thành công
       setOldPassword("");
@@ -246,21 +258,119 @@ if (profileData.ngaySinh?.trim()) {
 
   // --- Hàm xử lý lưu địa chỉ ---
   const handleSaveAddress = async () => {
-    if (!editingAddress) return; // Không có địa chỉ để lưu
-
+    if (!editingAddress) return;
     setLoading(true);
-    try {
-      // Gọi API cập nhật địa chỉ ở đây
-      // Ví dụ: await updateAddressAPI(editingAddress);
-      // Cập nhật lại danh sách địa chỉ sau khi lưu thành công
-      // setFullDiaChi(updatedAddressList);
-      setShowAddressPanel(false); // Đóng panel sau khi lưu
-    } catch (err) {
-      console.error("Lỗi lưu địa chỉ trong EditProfileScreen:", err);
-    } finally {
-      setLoading(false);
+
+    // Ghép addressLine từ các trường nhập
+    const addressLine = [
+      editingAddress.tenDuong || "",
+      wardItems.find((w) => w.value === wardValue)?.label ||
+        editingAddress.ward ||
+        "",
+      districtItems.find((d) => d.value === districtValue)?.label ||
+        editingAddress.district ||
+        "",
+    ]
+      .filter(Boolean)
+      .join(", ");
+
+    const cityLabel =
+      provinceItems.find((p) => p.value === provinceValue)?.label ||
+      editingAddress.city ||
+      "";
+
+    const addressData = {
+      userId,
+      fullName: editingAddress.fullName,
+      phoneNumber: editingAddress.phoneNumber,
+      addressLine,
+      city: cityLabel,
+      isDefault: editingAddress.isDefault || false,
+    };
+
+    let success = false;
+    if (editingAddress.addressId) {
+      // Sửa địa chỉ
+      success = await updateUserAddress(editingAddress.addressId, addressData);
+    } else {
+      // Thêm mới
+      const result = await addUserAddress(addressData);
+      success = !!result;
+    }
+
+    setLoading(false);
+    setShowAddressPanel(false);
+    if (success) {
+      loadProfile(); // Load lại profile để cập nhật danh sách địa chỉ
+      Alert.alert("Thành công", "Đã lưu địa chỉ!");
     }
   };
+
+  const handleEditAddress = (item) => {
+    setEditingAddress({
+      addressId: item.id,
+      fullName: item.tenNguoiNhan,
+      phoneNumber: item.soDienThoaiNN,
+      tenDuong: item.tenDuong ?? "",
+      city: item.thanhPho, // tỉnh/thành
+      district: item.huyen,
+      ward: item.xa,
+      isDefault: item.isDefault,
+    });
+
+    setProvinceValue(null);
+    setDistrictValue(null);
+    setWardValue(null);
+    setShowAddressPanel(true);
+  };
+  // Khi chọn địa chỉ để sửa → tìm và set lại code của tỉnh
+  useEffect(() => {
+    if (editingAddress && provinceItems.length > 0) {
+      const matchingProvince = provinceItems.find(
+        (p) => p.label === editingAddress.city
+      );
+      if (matchingProvince) {
+        setProvinceValue(matchingProvince.value);
+      }
+    }
+  }, [editingAddress, provinceItems]);
+
+  // Khi provinceValue đổi (tỉnh), sẽ load danh sách huyện → tìm và set lại huyện
+  useEffect(() => {
+    if (provinceValue) {
+      getDistricts(provinceValue).then((data) => {
+        setDistrictItems(data.map((d) => ({ label: d.name, value: d.code })));
+
+        if (editingAddress?.district) {
+          const matchedDistrict = data.find(
+            (d) => d.name === editingAddress.district
+          );
+          if (matchedDistrict) setDistrictValue(matchedDistrict.code);
+        } else {
+          setDistrictValue(null);
+        }
+
+        setWardItems([]);
+        setWardValue(null);
+      });
+    }
+  }, [provinceValue]);
+
+  // Khi districtValue đổi (huyện), sẽ load danh sách xã → tìm và set lại xã
+  useEffect(() => {
+    if (districtValue) {
+      getWards(districtValue).then((data) => {
+        setWardItems(data.map((w) => ({ label: w.name, value: w.code })));
+
+        if (editingAddress?.ward) {
+          const matchedWard = data.find((w) => w.name === editingAddress.ward);
+          if (matchedWard) setWardValue(matchedWard.code);
+        } else {
+          setWardValue(null);
+        }
+      });
+    }
+  }, [districtValue]);
 
   // --- Hàm xử lý thay đổi địa chỉ (trong panel thêm/sửa địa chỉ) ---
   const handleEditingAddressChange = (field, value) => {
@@ -280,6 +390,30 @@ if (profileData.ngaySinh?.trim()) {
       </View>
     );
   }
+  const handleDeleteAddress = async (addressId) => {
+    Alert.alert("Xác nhận xoá", "Bạn có chắc chắn muốn xoá địa chỉ này?", [
+      {
+        text: "Hủy",
+        style: "cancel",
+      },
+      {
+        text: "Xoá",
+        style: "destructive",
+        onPress: async () => {
+          setLoading(true);
+          try {
+            await deleteUserAddress(addressId);
+            loadProfile();
+            Alert.alert("Thành công", "Đã xoá địa chỉ.");
+          } catch (err) {
+            Alert.alert("Lỗi", "Không thể xoá địa chỉ.");
+          } finally {
+            setLoading(false);
+          }
+        },
+      },
+    ]);
+  };
 
   if (error) {
     return (
@@ -386,17 +520,16 @@ if (profileData.ngaySinh?.trim()) {
                 onChangeText={(text) => handleProfileDataChange("ten", text)}
                 placeholder="Nhập tên"
               />
-              <TextInput
-                style={styles.input}
-                value={profileData.ngaySinh}
-                onChangeText={(text) =>
-                  handleProfileDataChange("ngaySinh", text)
-                }
-                placeholder="Ngày sinh (YYYY-MM-DD)"
-              />
+
+              <BirthdayPicker
+              value={profileData.ngaySinh}
+              onChange={(displayDate) =>
+                handleProfileDataChange("ngaySinh", displayDate)
+              }
+            />
+
             </View>
           </View>
-
           <View style={styles.inputGroupFull}>
             <TextInput
               style={styles.input}
@@ -435,27 +568,49 @@ if (profileData.ngaySinh?.trim()) {
         {/* Danh sách địa chỉ */}
         {Array.isArray(profileData.danhSachDiaChi) &&
           profileData.danhSachDiaChi.map((item) => (
-            <TouchableOpacity
+            <View
               key={item.id}
               style={[
                 styles.addressItem,
                 item.isDefault && styles.selectedAddress,
               ]}
-              onPress={() => {
-                setEditingAddress(item);
-                setShowAddressPanel(true);
-              }}
             >
-              <Text style={styles.addressText}>{item.fullDiaChi}</Text>
-              {item.isDefault && <Text style={styles.defaultLabel}>✓</Text>}
-            </TouchableOpacity>
+              <TouchableOpacity
+                style={{ flex: 1 }}
+                onPress={() => handleEditAddress(item)}
+              >
+                <Text style={styles.addressText}>{item.fullDiaChi}</Text>
+              </TouchableOpacity>
+              {/* Nút Xóa */}
+              <TouchableOpacity
+                style={{ paddingHorizontal: 10 }}
+                onPress={() => handleDeleteAddress(item.id)}
+              >
+                <MaterialCommunityIcons
+                  name="delete-sweep"
+                  size={24}
+                  color="gray"
+                />
+              </TouchableOpacity>
+            </View>
           ))}
 
         {/* Nút thêm địa chỉ mới */}
         <TouchableOpacity
           style={styles.primaryButton}
           onPress={() => {
-            setEditingAddress(null);
+            setEditingAddress({
+              fullName: profileData?.fullName ?? "",
+              phoneNumber: profileData?.soDienThoai ?? "",
+              tenDuong: "",
+              city: "",
+              district: "",
+              ward: "",
+              isDefault: false,
+            });
+            setProvinceValue(null);
+            setDistrictValue(null);
+            setWardValue(null);
             setShowAddressPanel(true);
           }}
         >
@@ -481,7 +636,26 @@ if (profileData.ngaySinh?.trim()) {
                       style={styles.mapPlaceholder}
                     />
                   </View>
-
+                  {/* số điện thoại nhận hàng */}
+                  <Text style={styles.inputLabel}>TÊN NGƯỜI NHẬN HÀNG</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={editingAddress?.fullName || ""}
+                    onChangeText={(text) =>
+                      handleEditingAddressChange("tenDuong", text)
+                    }
+                    placeholder="tên người nhận hàng"
+                  />
+                  {/* số điện thoại nhận hàng */}
+                  <Text style={styles.inputLabel}>SỐ ĐIỆN THOẠI NHẬN HÀNG</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={editingAddress?.phoneNumber || ""}
+                    onChangeText={(text) =>
+                      handleEditingAddressChange("soDienThoai", text)
+                    }
+                    placeholder="số điện thoại nhận hàng"
+                  />
                   {/* TỈNH/THÀNH PHỐ */}
                   <Text style={styles.inputLabel}>TỈNH/THÀNH PHỐ</Text>
                   <DropDownPicker
@@ -546,6 +720,25 @@ if (profileData.ngaySinh?.trim()) {
                     placeholder="Tên đường, số nhà"
                   />
 
+                  {/* Đặt làm địa chỉ mặc định */}
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      marginTop: 12,
+                    }}
+                  >
+                    <Switch
+                      value={!!editingAddress?.isDefault}
+                      onValueChange={(value) =>
+                        handleEditingAddressChange("isDefault", value)
+                      }
+                    />
+                    <Text style={{ marginLeft: 8, fontSize: 15 }}>
+                      Đặt làm mặc định
+                    </Text>
+                  </View>
+
                   {/* Nhóm nút lưu + hủy */}
                   <View style={styles.buttonRow}>
                     <TouchableOpacity
@@ -554,15 +747,8 @@ if (profileData.ngaySinh?.trim()) {
                       disabled={loading}
                     >
                       <Text style={styles.primaryButtonText}>
-                        {editingAddress ? "Cập nhật" : "Thêm mới"}
+                        {editingAddress?.addressId ? "Cập nhật" : "Thêm mới"}
                       </Text>
-                      {loading && (
-                        <ActivityIndicator
-                          size="small"
-                          color="#fff"
-                          style={{ marginLeft: 10 }}
-                        />
-                      )}
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={styles.cancelButton}
@@ -571,6 +757,22 @@ if (profileData.ngaySinh?.trim()) {
                       <Text style={styles.cancelButtonText}>Hủy</Text>
                     </TouchableOpacity>
                   </View>
+                  {/* Nút xóa */}
+                  {editingAddress?.addressId && (
+                    <TouchableOpacity
+                      style={[
+                        styles.cancelButton,
+                        { backgroundColor: "#ffdddd", marginTop: 10 },
+                      ]}
+                      onPress={() =>
+                        handleDeleteAddress(editingAddress.addressId)
+                      }
+                    >
+                      <Text style={{ color: "#d00", fontWeight: "bold" }}>
+                        Xóa địa chỉ này
+                      </Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               </View>
             </View>
@@ -629,10 +831,10 @@ if (profileData.ngaySinh?.trim()) {
               onChangeText={setConfirmNewPassword}
             />
             <TouchableOpacity
-            // onPress={() =>
-            //   setIsConfirmNewPasswordVisible(!isConfirmNewPasswordVisible)
-            // }
-            // style={styles.eyeIcon}
+              onPress={() =>
+                setIsConfirmNewPasswordVisible(!isConfirmNewPasswordVisible)
+              }
+              style={styles.eyeIcon}
             >
               <MaterialCommunityIcons
                 name={
@@ -918,21 +1120,23 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderWidth: 1,
     borderColor: "#eee",
-  },
-  selectedAddress: {
-    borderColor: "#4472C4",
-    borderWidth: 1.5,
     padding: 16,
     margin: 16,
+    marginBottom: 0,
   },
   addressText: {
     fontSize: 15,
     color: "#333",
     flex: 1,
   },
+  selectedAddress: {
+    borderColor: "#4472C4",
+    borderWidth: 2,
+    backgroundColor: "#e6f0ff",
+  },
   defaultLabel: {
-    fontSize: 12,
-    color: "#4CAF50",
+    fontSize: 13,
+    color: "#4472C4",
     fontWeight: "bold",
     marginLeft: 10,
   },
@@ -1050,3 +1254,17 @@ const styles = StyleSheet.create({
 });
 
 export default EditProfileScreen;
+
+// Chuyển YYYY-MM-DD -> DD-MM-YYYY
+const formatDateToDisplay = (isoDate) => {
+  if (!isoDate) return "";
+  const [year, month, day] = isoDate.split("-");
+  return `${day}-${month}-${year}`;
+};
+
+// Chuyển DD-MM-YYYY -> YYYY-MM-DD
+const formatDateToISO = (displayDate) => {
+  if (!displayDate) return "";
+  const [day, month, year] = displayDate.split("-");
+  return `${year}-${month}-${day}`;
+};
