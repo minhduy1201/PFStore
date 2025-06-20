@@ -19,6 +19,8 @@ export const fetchProfileData = async (userId) => {
       ngaySinh: realData.birthday ?? "",
 
       diaChi: {
+        tenNguoiNhan: realData.defaultAddress?.fullName ?? "",
+        soDienThoaiNN: realData.defaultAddress?.phoneNumber ?? "",
         tenDuong: defaultAddress.houseNumberAndStreet ?? "",
         xa: defaultAddress.ward ?? "",
         huyen: defaultAddress.district ?? "",
@@ -34,6 +36,8 @@ export const fetchProfileData = async (userId) => {
         thanhPho: addr.city ?? "",
         isDefault: addr.isDefault ?? false,
         fullDiaChi: addr.fullAddress ?? "",
+        tenNguoiNhan: addr.fullName ?? "",
+        soDienThoaiNN: addr.phoneNumber ?? "",
       })),
     };
   } catch (error) {
@@ -43,15 +47,26 @@ export const fetchProfileData = async (userId) => {
   }
 };
 /**
- * Cập nhật thông tin cá nhân (họ tên, sdt, giới tính, ngày sinh)
+ * Cập nhật thông tin cá nhân (họ tên, số điện thoại, giới tính, ngày sinh)
+ * @param {number} userId - ID của người dùng
+ * @param {{ fullName?: string, phoneNumber?: string, gender?: string, birthday?: string }} updateData - Dữ liệu cần cập nhật
  */
 export const updateUserInfo = async (userId, updateData) => {
   try {
-    await api.put(`/Profile/${userId}/info`, updateData);
-    Alert.alert("Thành công", "Thông tin cá nhân đã được cập nhật.");
+    const response = await api.put(`/Profile/${userId}/info`, updateData);
+
+    // Kiểm tra phản hồi 204 (NoContent)
+    if (response.status === 204) {
+      Alert.alert("Thành công", "Thông tin cá nhân đã được cập nhật.");
+    } else {
+      Alert.alert("Cập nhật xong", "Thông tin đã được xử lý.");
+    }
+
+    return true;
   } catch (error) {
     console.error("Lỗi khi cập nhật thông tin cá nhân:", error);
-    handleApiError(error, "Cập nhật thông tin thất bại.");
+    handleApiError(error, "Không thể cập nhật thông tin. Vui lòng thử lại.");
+    return false;
   }
 };
 
@@ -80,6 +95,7 @@ export const uploadUserAvatar = async (userId, imageFile) => {
     throw error;
   }
 };
+
 
 // export const updateProfileData = async (userId, profileData) => {
 //   try {

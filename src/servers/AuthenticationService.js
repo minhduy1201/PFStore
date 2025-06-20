@@ -57,3 +57,19 @@ export const getUserId = async () => {
     return null;
   }
 };
+
+//đổi mật khẩu (dùng trong phần profile)
+export const changePassword = async (oldPassword, newPassword) => {
+  try {
+    const response = await api.put("/Auth/change-password", {
+      oldPassword,
+      newPassword,
+    });
+
+    // Nếu API trả về message thì trả về thành công
+    return response.data?.message || "Đổi mật khẩu thành công";
+  } catch (error) {
+    handleApiError(error, "Đổi mật khẩu thất bại");
+    return null;
+  }
+};
