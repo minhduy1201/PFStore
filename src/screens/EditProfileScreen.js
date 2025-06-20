@@ -26,7 +26,6 @@ import DropDownPicker from "react-native-dropdown-picker";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import * as ImagePicker from "expo-image-picker";
 
-
 import {
   fetchProfileData,
   updateUserInfo,
@@ -40,16 +39,13 @@ import {
 } from "../servers/LocationService";
 import { changePassword } from "../servers/AuthenticationService";
 import BirthdayPicker from "./BirthdayPicker";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const EditProfileScreen = ({ navigation, route }) => {
-  // Lấy userId từ params hoặc context/store
-  const userId = route?.params?.userId ?? 1;
-
   // State chính để lưu trữ tất cả thông tin hồ sơ
   const [profileData, setProfileData] = useState(null);
   const [loading, setLoading] = useState(true); // Trạng thái loading chung cho toàn màn hình hoặc các thao tác
   const [error, setError] = useState(null); // Trạng thái lỗi (nếu có)
-
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
@@ -87,7 +83,19 @@ const EditProfileScreen = ({ navigation, route }) => {
 
   const defaultBirthday = "01-01-2000";
   const [ngaySinh, setNgaySinh] = useState(defaultBirthday);
+const [userId, setUserId] = useState(null);
 
+useEffect(() => {
+  const fetchUserId = async () => {
+    try {
+      const id = await AsyncStorage.getItem('userId');
+      if (id) setUserId(Number(id));
+    } catch (e) {
+      Alert.alert("Lỗi", "Không lấy được userId từ bộ nhớ.");
+    }
+  };
+  fetchUserId();
+}, []);
   // hàm chọn ảnh đại diện
   const handlePickAvatar = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
@@ -114,12 +122,18 @@ const EditProfileScreen = ({ navigation, route }) => {
       handleProfileDataChange("gioiTinh", genderValue);
     }
   }, [genderValue]);
-  
+
   // Hàm tải dữ liệu hồ sơ
   const loadProfile = async () => {
     try {
       setLoading(true);
       setError(null);
+
+      const userId = await AsyncStorage.getItem("userId");
+      if (!userId || isNaN(userId)) {
+        throw new Error("Không tìm thấy userId hoặc không hợp lệ");
+      }
+
       const data = await fetchProfileData(userId);
       setProfileData(data);
       setGenderValue(data.gioiTinh ?? null);
@@ -522,12 +536,11 @@ const EditProfileScreen = ({ navigation, route }) => {
               />
 
               <BirthdayPicker
-              value={profileData.ngaySinh}
-              onChange={(displayDate) =>
-                handleProfileDataChange("ngaySinh", displayDate)
-              }
-            />
-
+                value={profileData.ngaySinh}
+                onChange={(displayDate) =>
+                  handleProfileDataChange("ngaySinh", displayDate)
+                }
+              />
             </View>
           </View>
           <View style={styles.inputGroupFull}>

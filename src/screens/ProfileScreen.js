@@ -17,6 +17,9 @@ const ProfileScreen = ({ navigation }) => {
   };
 
   //Hàm đăng xuất
+  const handleLogout = () => {
+    Logout(navigation);
+  };
 
   return (
     <ScrollView style={styles.container}>
@@ -74,7 +77,7 @@ const ProfileScreen = ({ navigation }) => {
       </View>
 
       {/* Nút Đăng xuất */}
-      <TouchableOpacity style={styles.logoutButton} onPress={Logout}>
+      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
         <Text style={styles.logoutButtonText}>Đăng xuất</Text>
       </TouchableOpacity>
     </ScrollView>
