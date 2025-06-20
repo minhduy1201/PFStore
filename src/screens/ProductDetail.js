@@ -22,6 +22,7 @@ import {
   deleteWishlist,
   getWishlistByUser,
 } from "../servers/WishlistService";
+import { getCommentByProId } from "../servers/CommentService";
 
 const { width } = Dimensions.get("window");
 
@@ -34,6 +35,7 @@ export default function ProductDetail({ route, navigation }) {
   const [error, setError] = useState(false);
   const [showFullDescription, setShowFullDescription] = useState(false);
 
+  const [comment, setComment] = useState([]);
   const [isFavorite, setIsFavorite] = useState(false);
   const [favoriteLoading, setFavoriteLoading] = useState(false);
 
@@ -66,6 +68,7 @@ export default function ProductDetail({ route, navigation }) {
     }
   }, [productId]);
 
+  //load lên chi tiết sản phẩm
   useEffect(() => {
     if (productId) {
       loadProductDetail();
@@ -74,6 +77,21 @@ export default function ProductDetail({ route, navigation }) {
       navigation.goBack();
     }
   }, [productId, loadProductDetail, navigation]);
+
+  //load lên bình luận sản phẩm
+  useEffect(() => {
+    const loadComments = async (productId) => {
+      try {
+        const data = await getCommentByProId(productId);
+        if (data && Array.isArray(data)) {
+          setComment(data);
+        }
+      } catch (error) {
+        console.log("Không thể lấy được bình luận");
+      }
+    };
+    loadComments();
+  }, []);
 
   //Hàm xử lý thêm/ xóa yêu thích
   const handleToggleFavorite = async () => {
@@ -284,27 +302,10 @@ export default function ProductDetail({ route, navigation }) {
               <Ionicons name="chevron-forward" size={24} color="#ccc" />
             </TouchableOpacity>
           )}
-          {/* Comments Section */}
+          {/* Phần bình luận */}
           <View style={styles.commentsSection}>
             <Text style={styles.commentsTitle}>Bình luận</Text>
-            {/* Example comments */}
-            <View style={styles.commentItem}>
-              <View style={styles.commentContent}>
-                <Text style={styles.commentAuthor}>Tô Nhật</Text>
-                <Text style={styles.commentText}>Kính này gọng gì vậy?</Text>
-                <Text style={styles.commentTime}>11 giờ trước • Phản hồi</Text>
-              </View>
-            </View>
-            <View style={styles.commentItem}>
-              <View style={styles.commentContent}>
-                <Text style={styles.commentAuthor}>Tường An</Text>
-                <Text style={styles.commentText}>
-                  Kính gọng kim loại, dẻo và bền lắm b
-                </Text>
-                <Text style={styles.commentTime}>10 giờ trước • Phản hồi</Text>
-              </View>
-            </View>
-
+            <Scrollview></Scrollview>
             {/* Comment input */}
             <View style={styles.commentInputContainer}>
               <TextInput

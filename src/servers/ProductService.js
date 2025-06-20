@@ -47,6 +47,8 @@ export const getProductByCatId = async (categoryId) => {
   }
 };
 
+
+
 // --- Dữ liệu giả lập cho danh sách sản phẩm của người dùng ---
 const MOCK_USER_POSTS_DATA = [
   {
