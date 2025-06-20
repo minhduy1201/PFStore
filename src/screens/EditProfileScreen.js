@@ -20,7 +20,7 @@ import * as ImagePicker from "expo-image-picker";
 
 import {
   fetchProfileData,
-  updateProfileData,
+  updateUserInfo,
   changeUserPassword,
   uploadUserAvatar,
 } from "../servers/ProfileService";
@@ -64,9 +64,17 @@ const EditProfileScreen = ({ navigation, route }) => {
   const [fullDiaChi, setFullDiaChi] = useState([]); // Danh sách địa chỉ
   const [editingAddress, setEditingAddress] = useState(null); // Địa chỉ đang chỉnh sửa
   const [showAddressPanel, setShowAddressPanel] = useState(false); // Hiển thị panel thêm/sửa địa chỉ
+  const [genderOpen, setGenderOpen] = useState(false);
+  const [genderValue, setGenderValue] = useState(profileData?.gioiTinh ?? null);
+  const [genderItems, setGenderItems] = useState([
+    { label: "Nam", value: "male" },
+    { label: "Nữ", value: "female" },
+    { label: "Khác", value: "other" },
+  ]);
 
   const [avatarUrl, setAvatarUrl] = useState(profileData?.avatarUrl);
 
+  //hàm chọn ảnh đại diện
   const handlePickAvatar = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -88,13 +96,19 @@ const EditProfileScreen = ({ navigation, route }) => {
     }
   };
 
+  useEffect(() => {
+    if (genderValue) {
+      handleProfileDataChange("gioiTinh", genderValue);
+    }
+  }, [genderValue]);
+  // Hàm tải dữ liệu hồ sơ
   const loadProfile = async () => {
     try {
       setLoading(true);
       setError(null);
       const data = await fetchProfileData(userId);
-      console.log("Dữ liệu hồ sơ:", data);
       setProfileData(data);
+      setGenderValue(data.gioiTinh ?? null);
 
       // Nếu có city, tìm code tương ứng để set cho provinceValue
       if (data.diaChi?.thanhPho) {
@@ -176,25 +190,34 @@ const EditProfileScreen = ({ navigation, route }) => {
       };
     });
   };
-
   // --- Hàm xử lý cập nhật hồ sơ ---
   const handleUpdateProfile = async () => {
-    if (!profileData) {
-      Alert.alert("Lỗi", "Dữ liệu hồ sơ chưa sẵn sàng để cập nhật.");
+    if (!profileData) return;
+    // Kiểm tra dữ liệu đầu vào
+    if (!profileData.fullName || !profileData.soDienThoai) {
+      Alert.alert("Lỗi", "Vui lòng nhập đầy đủ họ tên và số điện thoại.");
       return;
     }
+   const payload = {
+  fullName: `${ho} ${ten}`.trim(),
+  phoneNumber: profileData.soDienThoai,
+  gender: profileData.gioiTinh,
+};
 
+if (profileData.ngaySinh?.trim()) {
+  payload.birthday = profileData.ngaySinh;
+}
+
+    console.log("Payload gửi đi:", payload);
     setLoading(true);
-    try {
-      const response = await updateProfileData(userId, profileData);
-      Alert.alert("Thành công", response.message || "Hồ sơ đã được cập nhật!");
-    } catch (err) {
-      console.error("Lỗi cập nhật hồ sơ trong EditProfileScreen:", err);
-    } finally {
-      setLoading(false);
+    const success = await updateUserInfo(userId, payload);
+    setLoading(false);
+
+    if (success) {
+      Alert.alert("Thành công", "Thông tin cá nhân đã được cập nhật.");
+      loadProfile();
     }
   };
-
   // --- Hàm xử lý đổi mật khẩu ---
   const handleChangePassword = async () => {
     if (newPassword !== confirmNewPassword) {
@@ -315,7 +338,7 @@ const EditProfileScreen = ({ navigation, route }) => {
               source={
                 profileData.avatarUrl
                   ? { uri: profileData.avatarUrl }
-                  : 'https://i.pinimg.com/736x/8f/1c/a2/8f1ca2029e2efceebd22fa05cca423d7.jpg'
+                  : "https://i.pinimg.com/736x/8f/1c/a2/8f1ca2029e2efceebd22fa05cca423d7.jpg"
               }
               style={styles.avatarPlaceholder}
             />
@@ -341,11 +364,18 @@ const EditProfileScreen = ({ navigation, route }) => {
                 onChangeText={(text) => handleProfileDataChange("ho", text)}
                 placeholder="Nhập họ"
               />
-              <TextInput
-                style={styles.input}
-                value={profileData.gioiTinh}
-                onChangeText={(text) => handleProfileDataChange("gioiTinh", text)}
-                placeholder="Nhập họ"
+              <DropDownPicker
+                open={genderOpen}
+                value={genderValue}
+                items={genderItems}
+                setOpen={setGenderOpen}
+                setValue={setGenderValue}
+                setItems={setGenderItems}
+                placeholder="Chọn giới tính"
+                style={styles.dropdown}
+                dropDownContainerStyle={styles.dropdownBox}
+                zIndex={5000}
+                zIndexInverse={1000}
               />
             </View>
             <View style={styles.inputGroupHalf}>
@@ -359,7 +389,9 @@ const EditProfileScreen = ({ navigation, route }) => {
               <TextInput
                 style={styles.input}
                 value={profileData.ngaySinh}
-                onChangeText={(text) => handleProfileDataChange("ngaySinh", text)}
+                onChangeText={(text) =>
+                  handleProfileDataChange("ngaySinh", text)
+                }
                 placeholder="Ngày sinh (YYYY-MM-DD)"
               />
             </View>
@@ -374,17 +406,17 @@ const EditProfileScreen = ({ navigation, route }) => {
               keyboardType="email-address"
               editable={false}
             />
-             <TextInput
+            <TextInput
               style={styles.input}
               value={profileData.soDienThoai}
-              onChangeText={(text) => handleProfileDataChange("soDienThoai", text)}
+              onChangeText={(text) =>
+                handleProfileDataChange("soDienThoai", text)
+              }
               placeholder=""
               keyboardType="email-address"
               editable={false}
             />
-            
           </View>
-       
         </View>
         <TouchableOpacity
           style={styles.primaryButton}
@@ -393,9 +425,7 @@ const EditProfileScreen = ({ navigation, route }) => {
         >
           <View>
             <Text style={styles.primaryButtonText}>Cập Nhật</Text>
-            {loading && (
-              <ActivityIndicator />
-            )}
+            {loading && <ActivityIndicator />}
           </View>
         </TouchableOpacity>
 
@@ -442,6 +472,7 @@ const EditProfileScreen = ({ navigation, route }) => {
           >
             <View style={styles.overlay}>
               <View style={styles.popupPanel}>
+                {/* KHÔNG dùng ScrollView/KeyboardAwareScrollView ở đây */}
                 <View style={styles.formSectionColumn}>
                   {/* Placeholder Bản đồ */}
                   <View style={styles.mapPlaceholderContainer}>
@@ -598,10 +629,10 @@ const EditProfileScreen = ({ navigation, route }) => {
               onChangeText={setConfirmNewPassword}
             />
             <TouchableOpacity
-              onPress={() =>
-                setIsConfirmNewPasswordVisible(!isConfirmNewPasswordVisible)
-              }
-              style={styles.eyeIcon}
+            // onPress={() =>
+            //   setIsConfirmNewPasswordVisible(!isConfirmNewPasswordVisible)
+            // }
+            // style={styles.eyeIcon}
             >
               <MaterialCommunityIcons
                 name={
@@ -797,7 +828,6 @@ const styles = StyleSheet.create({
     resizeMode: "cover",
     backgroundColor: "#f0f0f0",
     borderRadius: 50,
-  
   },
   primaryButton: {
     backgroundColor: "#323660",
@@ -997,7 +1027,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     marginTop: 2,
   },
-  fullNameText:{
+  fullNameText: {
     fontSize: 16,
     fontWeight: "bold",
     color: "#333",
