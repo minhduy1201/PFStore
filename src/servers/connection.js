@@ -1,7 +1,7 @@
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Alert } from "react-native";
-const API_BASE_URL = "https://64bb-14-241-170-199.ngrok-free.app/api";
+const API_BASE_URL = "https://9483-14-241-170-199.ngrok-free.app/api";
 
 // Tạo một instance của axios
 export const api = axios.create({

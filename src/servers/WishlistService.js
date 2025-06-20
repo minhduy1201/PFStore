@@ -26,7 +26,6 @@ export const addWishlist = async (productId, userId) => {
     );
     return null;
   }
-
   try {
     const requestBody = {
       productId: productId,
