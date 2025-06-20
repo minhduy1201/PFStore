@@ -37,9 +37,8 @@ export const getProducts = async () => {
 //Lấy sản phẩm theo id
 export const getProductById = async (productId) => {
   try {
-    console.log("Đang lây sản phẩm từ Product");
     const res = await api.get(`/Products/${productId}`);
-    console.log(res.data);
+    // console.log(res.data);
     return res.data;
   } catch (err) {
     handleApiError(err, "Lỗi khi lây sản phẩm theo Id");
@@ -52,13 +51,11 @@ export const getProductByCatId = async (categoryId) => {
   try {
     const res = await api.get(`/Products/category/${categoryId}`);
     return res.data;
-  } catch (err) {
-    handleApiError("Lỗi khi lấy sản phẩm theo danh mục sản phẩm", err);
+  } catch (error) {
+    handleApiError("Lỗi khi lấy sản phẩm theo danh mục sản phẩm", error);
     return null;
   }
 };
-
-
 
 // --- Dữ liệu giả lập cho danh sách sản phẩm của người dùng ---
 const MOCK_USER_POSTS_DATA = [
@@ -229,10 +226,10 @@ export const searchProducts = async (keyword) => {
       {
         id: "prod003",
         name: "Áo Nike thể thao",
-        imageUrl: "https://via.placeholder.com/200x200/333333/FFFFFF?text=Nike+Jogger",
+        imageUrl:
+          "https://via.placeholder.com/200x200/333333/FFFFFF?text=Nike+Jogger",
         price: 300000,
         description: "Áo Nike chất liệu cao cấp, thoải mái khi vận động.",
-
       },
     ];
 
