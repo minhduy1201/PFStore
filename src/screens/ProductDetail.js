@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -14,46 +14,122 @@ import {
   KeyboardAvoidingView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import Swiper from "react-native-swiper"; // Để tạo carousel ảnh
-import { getProductById } from "../servers/ProductService"; // Import hàm mới
+import Swiper from "react-native-swiper";
+import { getProductById } from "../servers/ProductService";
+import { getUserId } from "../servers/AuthenticationService"; // Đảm bảo đúng đường dẫn
+import {
+  addWishlist,
+  deleteWishlist,
+  getWishlistByUser,
+} from "../servers/WishlistService";
+import { getCommentByProId } from "../servers/CommentService";
 
 const { width } = Dimensions.get("window");
 
 const MAX_DESCRIPTION_LINES = 3;
 
 export default function ProductDetail({ route, navigation }) {
-  const { productId } = route.params; // Lấy productId từ tham số điều hướng
+  const { productId } = route.params;
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [showFullDescription, setShowFullDescription] = useState(false);
+
+  const [comment, setComment] = useState([]);
   const [isFavorite, setIsFavorite] = useState(false);
+  const [favoriteLoading, setFavoriteLoading] = useState(false);
 
-  useEffect(() => {
-    const loadProductDetail = async () => {
-      try {
-        setLoading(true);
-        const res = await getProductById(productId);
-        setProduct(res);
-      } catch (err) {
-        console.error("Failed to load product detail:", err);
-        setError(true);
-        Alert.alert(
-          "Lỗi",
-          "Không thể tải chi tiết sản phẩm. Vui lòng thử lại sau."
-        );
-      } finally {
-        setLoading(false);
+  const loadProductDetail = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await getProductById(productId);
+      setProduct(res);
+
+      //kiểm tra trạng thái của wishlist ban đầu
+      const userId = await getUserId();
+
+      if (userId) {
+        try {
+          const userWishlist = await getWishlistByUser();
+          const foundInWishlist = userWishlist.some(
+            (item) => item.product?.productId === productId
+          );
+          setIsFavorite(foundInWishlist);
+        } catch (wishlistErr) {
+          console.error("Không kiểm tra được wishlist ban đầu", wishlistErr);
+        }
       }
-    };
+    } catch (err) {
+      console.error("Không tải được danh sách sản phẩm:", err);
+      setError(true);
+      Alert.alert("Lỗi", "Không thể tải chi tiết sản phẩm.");
+    } finally {
+      setLoading(false);
+    }
+  }, [productId]);
 
+  //load lên chi tiết sản phẩm
+  useEffect(() => {
     if (productId) {
       loadProductDetail();
     } else {
       Alert.alert("Lỗi", "Không tìm thấy ID sản phẩm.");
-      navigation.goBack(); // Quay lại nếu không có ID sản phẩm
+      navigation.goBack();
     }
-  }, [productId]); // Chạy lại khi productId thay đổi
+  }, [productId, loadProductDetail, navigation]);
+
+  //load lên bình luận sản phẩm
+  useEffect(() => {
+    const loadComments = async (productId) => {
+      try {
+        const data = await getCommentByProId(productId);
+        if (data && Array.isArray(data)) {
+          setComment(data);
+        }
+      } catch (error) {
+        console.log("Không thể lấy được bình luận");
+      }
+    };
+    loadComments();
+  }, []);
+
+  //Hàm xử lý thêm/ xóa yêu thích
+  const handleToggleFavorite = async () => {
+    const userId = await getUserId();
+    if (!productId) {
+      Alert.alert("Lỗi", "Không tìm thấy ID sản phẩm để thêm/xóa.");
+      return;
+    }
+    if (favoriteLoading) {
+      return;
+    }
+
+    setFavoriteLoading(true);
+    try {
+      if (isFavorite) {
+        // Nếu đã yêu thích, thì xóa
+        const userWishlist = await getWishlistByUser();
+        const itemToRemove = userWishlist.find(
+          (item) => item.product?.productId === productId
+        );
+
+        if (itemToRemove && itemToRemove.wishlistId) {
+          await deleteWishlist(itemToRemove.wishlistId);
+          setIsFavorite(false);
+        } else {
+          Alert.alert("Lỗi", "Không tìm thấy sản phẩm trong wishlist để xóa.");
+        }
+      } else {
+        // Nếu chưa yêu thích, thì thêm
+        await addWishlist(productId, userId);
+        setIsFavorite(true);
+      }
+    } catch (error) {
+      console.log("Lỗi khi thay đổi trạng thái yêu thích:", error);
+    } finally {
+      setFavoriteLoading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -78,7 +154,6 @@ export default function ProductDetail({ route, navigation }) {
     );
   }
 
-  // Hàm để định dạng giá
   const formatPrice = (price) => {
     return price.toLocaleString("vi-VN", {
       style: "currency",
@@ -86,24 +161,20 @@ export default function ProductDetail({ route, navigation }) {
     });
   };
 
-  // Chuẩn bị các dòng mô tả
   const descriptionLines = product.description
     ? product.description.split(".").filter(Boolean)
     : [];
 
-  // Xác định xem có cần hiển thị nút "Xem thêm" hay không
   const needsReadMore = descriptionLines.length > MAX_DESCRIPTION_LINES;
 
-  // Các dòng mô tả sẽ hiển thị
   const displayedDescriptionLines = showFullDescription
     ? descriptionLines
     : descriptionLines.slice(0, MAX_DESCRIPTION_LINES);
 
   return (
-    // Dùng View bọc ngoài để chứa ScrollView và thanh action cố định
     <KeyboardAvoidingView
-      style={styles.fullScreenContainer} // Đặt flex: 1 ở đây
-      behavior={Platform.OS ? "padding" : "height"}
+      style={styles.fullScreenContainer}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
     >
       <ScrollView style={styles.container}>
@@ -117,6 +188,7 @@ export default function ProductDetail({ route, navigation }) {
           </TouchableOpacity>
         </View>
 
+        {/* Product Image Carousel */}
         {/* Product Image Carousel */}
         {product.images && product.images.length > 0 ? (
           <Swiper
@@ -180,15 +252,16 @@ export default function ProductDetail({ route, navigation }) {
               </TouchableOpacity>
             )}
 
-            {product.attributes && product.attributes.length > 0 && (
-              <View style={styles.attributesContainer}>
-                {product.attributes.map((attr, index) => (
-                  <Text key={index} style={styles.attributeText}>
-                    • {attr.attributeName}: {attr.value}
-                  </Text>
-                ))}
-              </View>
-            )}
+            {product.productAttributes &&
+              product.productAttributes.length > 0 && (
+                <View style={styles.attributesContainer}>
+                  {product.productAttributes.map((attr, index) => (
+                    <Text key={index} style={styles.attributeText}>
+                      • {attr.attributeName}: {attr.value}
+                    </Text>
+                  ))}
+                </View>
+              )}
           </View>
           {/* Thông tin người bán */}
           {product.seller && (
@@ -229,27 +302,10 @@ export default function ProductDetail({ route, navigation }) {
               <Ionicons name="chevron-forward" size={24} color="#ccc" />
             </TouchableOpacity>
           )}
-          {/* Comments Section */}
+          {/* Phần bình luận */}
           <View style={styles.commentsSection}>
             <Text style={styles.commentsTitle}>Bình luận</Text>
-            {/* Example comments */}
-            <View style={styles.commentItem}>
-              <View style={styles.commentContent}>
-                <Text style={styles.commentAuthor}>Tô Nhật</Text>
-                <Text style={styles.commentText}>Kính này gọng gì vậy?</Text>
-                <Text style={styles.commentTime}>11 giờ trước • Phản hồi</Text>
-              </View>
-            </View>
-            <View style={styles.commentItem}>
-              <View style={styles.commentContent}>
-                <Text style={styles.commentAuthor}>Tường An</Text>
-                <Text style={styles.commentText}>
-                  Kính gọng kim loại, dẻo và bền lắm b
-                </Text>
-                <Text style={styles.commentTime}>10 giờ trước • Phản hồi</Text>
-              </View>
-            </View>
-
+          
             {/* Comment input */}
             <View style={styles.commentInputContainer}>
               <TextInput
@@ -260,14 +316,26 @@ export default function ProductDetail({ route, navigation }) {
             </View>
           </View>
           {/* Đảm bảo có đủ padding ở cuối ScrollView để không bị che bởi thanh action */}
-          <View style={{ height: 100 }} /> {/* Padding dưới cùng */}
+          <View style={{ height: 100 }} />
         </View>
       </ScrollView>
 
       {/* Thanh action cố định ở dưới cùng */}
       <View style={styles.bottomActionContainer}>
-        <TouchableOpacity style={styles.favoriteButton}>
-          <Ionicons name="heart-outline" size={28} color="#666" />
+        <TouchableOpacity
+          style={styles.favoriteButton}
+          onPress={handleToggleFavorite}
+          disabled={favoriteLoading}
+        >
+          {favoriteLoading ? (
+            <ActivityIndicator size="small" color="#007bff" />
+          ) : (
+            <Ionicons
+              name={isFavorite ? "heart" : "heart-outline"}
+              size={24}
+              color={isFavorite ? "red" : "#666"}
+            />
+          )}
         </TouchableOpacity>
         <TouchableOpacity style={styles.addToCartButton}>
           <Text style={styles.buttonText}>Thêm vào giỏ</Text>
@@ -282,11 +350,11 @@ export default function ProductDetail({ route, navigation }) {
 
 const styles = StyleSheet.create({
   fullScreenContainer: {
-    flex: 1, // Đảm bảo container này chiếm toàn bộ màn hình
+    flex: 1,
     backgroundColor: "#fff",
   },
   container: {
-    flex: 1, // ScrollView chiếm phần còn lại của màn hình
+    flex: 1,
   },
   centered: {
     flex: 1,
@@ -303,11 +371,11 @@ const styles = StyleSheet.create({
   buttonText: {
     color: "#fff",
     fontSize: 16,
-    fontWeight: "bold", // Thêm fontWeight để giống hình ảnh
+    fontWeight: "bold",
   },
   header: {
     flexDirection: "row",
-    justifyContent: "flex-start", // Chỉ có nút back nên căn trái
+    justifyContent: "flex-start",
     alignItems: "center",
     paddingHorizontal: 16,
     paddingTop: 50,
@@ -512,25 +580,24 @@ const styles = StyleSheet.create({
     marginLeft: 10,
     fontSize: 15,
   },
-  // START: Styles mới cho thanh action cố định
   bottomActionContainer: {
-    position: "absolute", // Quan trọng: Đặt nó cố định
-    bottom: 0, // Đặt ở cuối màn hình
+    position: "absolute",
+    bottom: 0,
     left: 0,
     right: 0,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-around", // Căn đều các nút
-    backgroundColor: "#fff", // Nền trắng
+    justifyContent: "space-around",
+    backgroundColor: "#fff",
     paddingVertical: 10,
     paddingHorizontal: 15,
     borderTopWidth: 1,
     borderTopColor: "#eee",
-    shadowColor: "#000", // Thêm bóng đổ cho đẹp mắt
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
-    elevation: 10, // Shadow cho Android
+    elevation: 10,
     paddingBottom: Platform.OS === "ios" ? 20 : 10,
   },
   favoriteButton: {
@@ -544,8 +611,8 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   addToCartButton: {
-    flex: 1, // Cho phép nút này co giãn
-    backgroundColor: "#3a3f5a", // Màu từ hình ảnh
+    flex: 1,
+    backgroundColor: "#3a3f5a",
     paddingVertical: 12,
     borderRadius: 25,
     justifyContent: "center",
@@ -553,8 +620,8 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   buyNowButton: {
-    flex: 1, // Cho phép nút này co giãn
-    backgroundColor: "#4c8bf5", // Màu xanh dương từ hình ảnh
+    flex: 1,
+    backgroundColor: "#4c8bf5",
     paddingVertical: 12,
     borderRadius: 25,
     justifyContent: "center",

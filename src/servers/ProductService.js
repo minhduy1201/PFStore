@@ -7,7 +7,18 @@ export const GetCategories = async () => {
     const response = await api.get("/Categories");
     return response.data;
   } catch (error) {
-    handleApiError(error, "Lỗi khi lấy danh sách danh mục");
+    //handleApiError(error, "Lỗi khi lấy danh sách danh mục");
+    return null;
+  }
+};
+
+//Lấy danh sách các thương hiệu
+export const GetBrands = async () => {
+  try {
+    const response = await api.get("/Brands");
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "Lỗi khi lấy danh sách thương hiệu");
     return null;
   }
 };
@@ -28,6 +39,7 @@ export const getProductById = async (productId) => {
   try {
     console.log("Đang lây sản phẩm từ Product");
     const res = await api.get(`/Products/${productId}`);
+    console.log(res.data);
     return res.data;
   } catch (err) {
     handleApiError(err, "Lỗi khi lây sản phẩm theo Id");
@@ -41,10 +53,12 @@ export const getProductByCatId = async (categoryId) => {
     const res = await api.get(`/Products/category/${categoryId}`);
     return res.data;
   } catch (err) {
-    handleApiError(err, "Lỗi khi lấy sản phẩm theo danh mục sản phẩm");
+    handleApiError("Lỗi khi lấy sản phẩm theo danh mục sản phẩm", err);
     return null;
   }
 };
+
+
 
 // --- Dữ liệu giả lập cho danh sách sản phẩm của người dùng ---
 const MOCK_USER_POSTS_DATA = [
@@ -197,23 +211,28 @@ export const searchProducts = async (keyword) => {
       {
         id: "prod001",
         name: "Áo thun Champion đen đỏ size L",
-        imageUrl: "https://via.placeholder.com/200x200/000000/FF0000?text=Champion+TShirt",
+        imageUrl:
+          "https://via.placeholder.com/200x200/000000/FF0000?text=Champion+TShirt",
         price: 150000,
-        description: "Áo thun Champion màu đen phối đỏ, form Raglan, size L, hàng chất lượng cao.",
+        description:
+          "Áo thun Champion màu đen phối đỏ, form Raglan, size L, hàng chất lượng cao.",
       },
       {
         id: "prod002",
         name: "Jacket Champion - Hàng 2hand, legit",
-        imageUrl: "https://via.placeholder.com/200x200/000080/FFFFFF?text=Champion+Jacket",
+        imageUrl:
+          "https://via.placeholder.com/200x200/000080/FFFFFF?text=Champion+Jacket",
         price: 250000,
-        description: "Áo khoác Champion đã qua sử dụng nhưng còn mới, hàng chính hãng.",
+        description:
+          "Áo khoác Champion đã qua sử dụng nhưng còn mới, hàng chính hãng.",
       },
       {
         id: "prod003",
-        name: "Quần jogger Nike thể thao",
+        name: "Áo Nike thể thao",
         imageUrl: "https://via.placeholder.com/200x200/333333/FFFFFF?text=Nike+Jogger",
         price: 300000,
-        description: "Quần jogger Nike chất liệu cao cấp, thoải mái khi vận động.",
+        description: "Áo Nike chất liệu cao cấp, thoải mái khi vận động.",
+
       },
     ];
 
@@ -244,26 +263,31 @@ export const filterProductsByBrand = async (brand) => {
         id: "prod001",
         name: "Áo thun Champion đen đỏ size L",
         brand: "Champion",
-        imageUrl: "https://via.placeholder.com/200x200/000000/FF0000?text=Champion+TShirt",
+        imageUrl:
+          "https://via.placeholder.com/200x200/000000/FF0000?text=Champion+TShirt",
         price: 150000,
       },
       {
         id: "prod002",
         name: "Jacket Champion - Hàng 2hand, legit",
         brand: "Champion",
-        imageUrl: "https://via.placeholder.com/200x200/000080/FFFFFF?text=Champion+Jacket",
+        imageUrl:
+          "https://via.placeholder.com/200x200/000080/FFFFFF?text=Champion+Jacket",
         price: 250000,
       },
       {
         id: "prod003",
         name: "Quần jogger Nike thể thao",
         brand: "Nike",
-        imageUrl: "https://via.placeholder.com/200x200/333333/FFFFFF?text=Nike+Jogger",
+        imageUrl:
+          "https://via.placeholder.com/200x200/333333/FFFFFF?text=Nike+Jogger",
         price: 300000,
       },
     ];
 
-    return MOCK_PRODUCTS.filter((product) => product.brand.toLowerCase() === brand.toLowerCase());
+    return MOCK_PRODUCTS.filter(
+      (product) => product.brand.toLowerCase() === brand.toLowerCase()
+    );
   } catch (error) {
     console.error("Lỗi khi lọc sản phẩm theo thương hiệu:", error);
     handleApiError(error, "Không thể lọc sản phẩm theo thương hiệu.");
@@ -287,21 +311,24 @@ export const filterProductsBySize = async (size) => {
         id: "prod001",
         name: "Áo thun Champion đen đỏ size L",
         size: "L",
-        imageUrl: "https://via.placeholder.com/200x200/000000/FF0000?text=Champion+TShirt",
+        imageUrl:
+          "https://via.placeholder.com/200x200/000000/FF0000?text=Champion+TShirt",
         price: 150000,
       },
       {
         id: "prod002",
         name: "Jacket Champion - Hàng 2hand, legit",
         size: "M",
-        imageUrl: "https://via.placeholder.com/200x200/000080/FFFFFF?text=Champion+Jacket",
+        imageUrl:
+          "https://via.placeholder.com/200x200/000080/FFFFFF?text=Champion+Jacket",
         price: 250000,
       },
       {
         id: "prod003",
         name: "Quần jogger Nike thể thao",
         size: "L",
-        imageUrl: "https://via.placeholder.com/200x200/333333/FFFFFF?text=Nike+Jogger",
+        imageUrl:
+          "https://via.placeholder.com/200x200/333333/FFFFFF?text=Nike+Jogger",
         price: 300000,
       },
     ];
@@ -318,7 +345,9 @@ export const filterProductsBySize = async (size) => {
 export const filterProductsByPrice = async (minPrice, maxPrice) => {
   try {
     await new Promise((resolve) => setTimeout(resolve, 1500)); // Giả lập độ trễ
-    console.log(`Mock API: Đang lọc sản phẩm theo giá: từ ${minPrice} đến ${maxPrice}`);
+    console.log(
+      `Mock API: Đang lọc sản phẩm theo giá: từ ${minPrice} đến ${maxPrice}`
+    );
 
     // --- MÔ PHỎNG API CALL ---
     // Trong thực tế, bạn sẽ làm như thế này (giả sử backend có endpoint này):
@@ -330,19 +359,22 @@ export const filterProductsByPrice = async (minPrice, maxPrice) => {
         id: "prod001",
         name: "Áo thun Champion đen đỏ size L",
         price: 150000,
-        imageUrl: "https://via.placeholder.com/200x200/000000/FF0000?text=Champion+TShirt",
+        imageUrl:
+          "https://via.placeholder.com/200x200/000000/FF0000?text=Champion+TShirt",
       },
       {
         id: "prod002",
         name: "Jacket Champion - Hàng 2hand, legit",
         price: 250000,
-        imageUrl: "https://via.placeholder.com/200x200/000080/FFFFFF?text=Champion+Jacket",
+        imageUrl:
+          "https://via.placeholder.com/200x200/000080/FFFFFF?text=Champion+Jacket",
       },
       {
         id: "prod003",
         name: "Quần jogger Nike thể thao",
         price: 300000,
-        imageUrl: "https://via.placeholder.com/200x200/333333/FFFFFF?text=Nike+Jogger",
+        imageUrl:
+          "https://via.placeholder.com/200x200/333333/FFFFFF?text=Nike+Jogger",
       },
     ];
 
@@ -374,7 +406,8 @@ export const filterProducts = async (brand, size, minPrice, maxPrice) => {
         brand: "Champion",
         size: "L",
         price: 150000,
-        imageUrl: "https://via.placeholder.com/200x200/000000/FF0000?text=Champion+TShirt",
+        imageUrl:
+          "https://via.placeholder.com/200x200/000000/FF0000?text=Champion+TShirt",
       },
       {
         id: "prod002",
@@ -382,7 +415,8 @@ export const filterProducts = async (brand, size, minPrice, maxPrice) => {
         brand: "Champion",
         size: "M",
         price: 250000,
-        imageUrl: "https://via.placeholder.com/200x200/000080/FFFFFF?text=Champion+Jacket",
+        imageUrl:
+          "https://via.placeholder.com/200x200/000080/FFFFFF?text=Champion+Jacket",
       },
       {
         id: "prod003",
@@ -390,7 +424,8 @@ export const filterProducts = async (brand, size, minPrice, maxPrice) => {
         brand: "Nike",
         size: "L",
         price: 300000,
-        imageUrl: "https://via.placeholder.com/200x200/333333/FFFFFF?text=Nike+Jogger",
+        imageUrl:
+          "https://via.placeholder.com/200x200/333333/FFFFFF?text=Nike+Jogger",
       },
     ];
 
@@ -398,7 +433,9 @@ export const filterProducts = async (brand, size, minPrice, maxPrice) => {
       (product) =>
         (brand ? product.brand === brand : true) &&
         (size ? product.size === size : true) &&
-        (minPrice && maxPrice ? product.price >= minPrice && product.price <= maxPrice : true)
+        (minPrice && maxPrice
+          ? product.price >= minPrice && product.price <= maxPrice
+          : true)
     );
   } catch (error) {
     console.error("Lỗi khi lọc sản phẩm:", error);
