@@ -1,34 +1,13 @@
-import React, { useEffect, useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  Image,
-  TextInput,
-  TouchableOpacity,
-  Alert,
-  Modal,
-  TouchableWithoutFeedback,
-  Keyboard,
-  Dimensions,
-} from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { GetCategories, getProducts } from "../servers/ProductService";
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, Image, TextInput, TouchableOpacity, Alert, Modal, TouchableWithoutFeedback, Keyboard } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { GetCategories, getProducts, GetProducts } from '../servers/ProductService';
 
-const { width } = Dimensions.get("window");
-// Calculate card width for two columns with spacing and padding
-const cardWidth = (width - 16 * 2 - 10) / 2; // (screenWidth - horizontalPadding * 2 - spaceBetweenCards) / 2
 export default function HomeScreen({ navigation }) {
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
   const [keyword, setKeyword] = useState("");
-  const [showFilter, setShowFilter] = useState(false);
-  const [selectedBrands, setSelectedBrands] = useState([]);
-  const [selectedSizes, setSelectedSizes] = useState([]);
-  const [minPrice, setMinPrice] = useState("");
-  const [maxPrice, setMaxPrice] = useState("");
 
   useEffect(() => {
     const checkLoginStatus = async () => {
@@ -45,7 +24,7 @@ export default function HomeScreen({ navigation }) {
     };
 
     checkLoginStatus();
-  }, []);
+  }, [categories, navigation]);
 
   useEffect(() => {
     const loadCategories = async () => {
@@ -53,9 +32,11 @@ export default function HomeScreen({ navigation }) {
         const res = await GetCategories();
         if (res && Array.isArray(res)) {
           setCategories(res);
+        } else {
+          Alert.alert("Lỗi", "Không thể tải danh mục sản phẩm");
         }
       } catch (error) {
-        //Alert.alert("Lỗi", "Đã xảy ra lỗi khi tải danh mục");
+        Alert.alert("Lỗi", "Đã xảy ra lỗi khi tải danh mục");
         console.log("Load category error:", error);
       }
     };
@@ -82,64 +63,20 @@ export default function HomeScreen({ navigation }) {
     navigation.navigate("SearchProducts", { keyword }); // Chuyển sang màn hình SearchProducts với từ khóa
   };
 
-  // Xử lý mở/đóng filter popupAdd commentMore actions
-  const toggleFilter = () => {
-    setShowFilter(!showFilter);
-  };
 
-  // Xử lý nút thiết lập lại
-  const resetFilters = () => {
-    setSelectedBrands([]);
-    setSelectedSizes([]);
-    setMinPrice("");
-    setMaxPrice("");
-  };
-
-  // Xử lý áp dụng lọc
-  const applyFilter = () => {
-    // lọc sản phẩm theo các lựa chọn đã chọn
-    console.log("Applied Filters:", {
-      selectedBrands,
-      selectedSizes,
-      minPrice,
-      maxPrice,
-    });
-    setShowFilter(false);
-  };
-
-  // Hàm để toggle chọn thương hiệu
-  const toggleBrandSelection = (brand) => {
-    if (selectedBrands.includes(brand)) {
-      setSelectedBrands(selectedBrands.filter((b) => b !== brand)); // Bỏ chọn nếu đã chọn
-    } else {
-      setSelectedBrands([...selectedBrands, brand]); // Thêm vào danh sách đã chọn
-    }
-  };
-
-  // Hàm để toggle chọn size
-  const toggleSizeSelection = (size) => {
-    if (selectedSizes.includes(size)) {
-      setSelectedSizes(selectedSizes.filter((s) => s !== size)); // Bỏ chọn size nếu đã chọn
-    } else {
-      setSelectedSizes([...selectedSizes, size]); // Thêm size vào danh sách đã chọn
-    }
-  };
 
   return (
     <ScrollView style={styles.container}>
       {/* Thanh tìm kiếm */}
       <View style={styles.header}>
         <Image
-          source={require("../../assets/images/logo.jpg")}
+          source={require('../../assets/images/logo.jpg')}
           style={styles.logo}
           resizeMode="contain"
         />
         <TextInput style={styles.searchInput} placeholder="Tìm kiếm sản phẩm" />
         <TouchableOpacity onPress={handleSearch} style={styles.searchButton}>
           <Ionicons name="search" size={24} color="black" />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={toggleFilter}>
-          <Ionicons name="filter" size={24} color="black" />
         </TouchableOpacity>
       </View>
 
@@ -182,8 +119,7 @@ export default function HomeScreen({ navigation }) {
           ))}
         </ScrollView>
       </View>
-
-      {/* Products */}
+  {/* Products */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Sản phẩm</Text>
@@ -220,98 +156,6 @@ export default function HomeScreen({ navigation }) {
           ))}
         </View>
       </View>
-
-      {/* Popup lọc sản phẩm */}
-      {showFilter && (
-        <Modal
-          transparent={true}
-          animationType="slide"
-          visible={showFilter}
-          onRequestClose={toggleFilter}
-        >
-          <TouchableWithoutFeedback onPress={() => setShowFilter(false)}>
-            <View style={styles.overlay}></View>
-          </TouchableWithoutFeedback>
-          <View style={styles.filterContainer}>
-            <View style={styles.filterContent}>
-              <Text style={styles.filterTitle}>Lọc Sản Phẩm</Text>
-
-              {/* Thương hiệu */}
-              <Text style={styles.filterLabel}>Thương hiệu</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                <View style={styles.categories}>
-                  {categories.map((cat, index) => (
-                    <TouchableOpacity
-                      key={index}
-                      style={[
-                        styles.categoryItem,
-                        selectedBrands.includes(cat.name) &&
-                          styles.selectedCategory,
-                      ]}
-                      onPress={() => toggleBrandSelection(cat.name)}
-                    >
-                      <Text style={styles.categoryText}>{cat.name}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </ScrollView>
-
-              {/* Size */}
-              <Text style={styles.filterLabel}>Size</Text>
-              <View style={styles.categories}>
-                {["XS", "S", "M", "L", "XL", "2XL"].map((sizeOption, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    style={[
-                      styles.categoryItem,
-                      selectedSizes.includes(sizeOption) &&
-                        styles.selectedCategory,
-                    ]}
-                    onPress={() => toggleSizeSelection(sizeOption)}
-                  >
-                    <Text style={styles.categoryText}>{sizeOption}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              {/* Giá */}
-              <Text style={styles.filterLabel}>Giá</Text>
-              <View style={styles.priceContainer}>
-                <TextInput
-                  style={styles.filterInput}
-                  value={minPrice}
-                  onChangeText={setMinPrice}
-                  placeholder="Giá tối thiểu"
-                  keyboardType="numeric"
-                />
-                <TextInput
-                  style={styles.filterInput}
-                  value={maxPrice}
-                  onChangeText={setMaxPrice}
-                  placeholder="Giá tối đa"
-                  keyboardType="numeric"
-                />
-              </View>
-
-              {/* Nút thiết lập lại và áp dụng */}
-              <View style={styles.buttonContainer}>
-                <TouchableOpacity
-                  onPress={resetFilters}
-                  style={styles.buttonReset}
-                >
-                  <Text style={styles.buttonText}>Thiết lập lại</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={applyFilter}
-                  style={styles.buttonApply}
-                >
-                  <Text style={styles.buttonText}>Áp dụng</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
-      )}
     </ScrollView>
   );
 }
@@ -320,113 +164,97 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#fff",
-    paddingHorizontal: 16,
-    paddingTop: 50,
-    marginBottom: 55,
+    paddingTop: 30, // Adjust for status bar
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 12,
-    justifyContent: "space-between",
+    padding: 10,
+    backgroundColor: "#fff",
+  },
+  logo: {
+    width: 50,
+    height: 50,
+    marginRight: 10,
   },
   searchInput: {
     flex: 1,
-    marginHorizontal: 10,
-    padding: 10,
-    borderRadius: 10,
-    backgroundColor: "#f2f2f2",
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    height: 40,
+    marginRight: 8,
+    backgroundColor: "#f5f5f5",
+  },
+  searchButton: {
+    padding: 8,
+    marginRight: 8,
   },
   banner: {
-    height: 150,
-    borderRadius: 12,
-    overflow: "hidden",
-    marginBottom: 20,
+    marginVertical: 10,
+    alignItems: "center",
   },
   bannerImage: {
     width: "100%",
-    height: "100%",
-    resizeMode: "cover",
+    height: 120,
+    borderRadius: 10,
   },
   section: {
-    marginBottom: 15,
+    marginVertical: 10,
+    paddingHorizontal: 10,
   },
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 10,
+    marginBottom: 8,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: "600",
+    fontWeight: "bold",
   },
   categoriesScrollContainer: {
-    flexDirection: "row",
-    paddingBottom: 10,
+    paddingVertical: 5,
   },
   categoryItem: {
-    backgroundColor: "#f0f0f0",
-    paddingVertical: 8,
+    paddingVertical: 6,
     paddingHorizontal: 14,
-    borderRadius: 20,
-    marginRight: 10,
+    borderRadius: 16,
+    backgroundColor: "#f0f0f0",
+    marginRight: 8,
+    marginBottom: 5,
+  },
+  selectedCategory: {
+    backgroundColor: "#007bff",
   },
   categoryText: {
-    fontSize: 13,
-    fontWeight: "500",
+    fontSize: 14,
     color: "#333",
   },
 
-  // --- New Styles for Products Grid ---
-  productsGridContainer: {
-    flexDirection: "row", // Arrange items in a row
-    flexWrap: "wrap", // Allow items to wrap to the next line
-    justifyContent: "space-between", // Distribute space between items
-  },
   productCard: {
-    borderWidth: 1,
-    borderColor: "#f0f0f0",
-    backgroundColor: "#f0f0f0",
-    borderRadius: 15,
-    width: cardWidth, // Use the calculated cardWidth
-    marginBottom: 10, // Space between rows
-    padding: 8,
-    height: 220, // Adjusted height to accommodate image and text better
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    overflow: "hidden",
+    width: 120,
+    marginRight: 16,
   },
   productImage: {
-    width: "100%",
-    height: cardWidth - 16, // Keep aspect ratio, subtract padding
+    width: '100%',
+    height: 100,
     borderRadius: 10,
-    backgroundColor: "#eee",
-    marginBottom: 6,
-    resizeMode: "cover",
-  },
-  productInfo: {
-    flex: 1,
-    justifyContent: "space-between",
-    width: "100%",
+    backgroundColor: '#eee',
   },
   productTitle: {
-    fontSize: 13,
-    fontWeight: "600",
-    marginBottom: 1,
-    color: "#333",
-    lineHeight: 18,
-    // Add these two lines to limit text to two lines
-    maxHeight: 36, // Approx height for 2 lines (18 * 2)
-    overflow: "hidden",
+    marginTop: 5,
+    fontSize: 14,
   },
   productPrice: {
-    fontSize: 14,
-    fontWeight: "bold",
-    marginTop: 1,
+    fontWeight: 'bold',
+    marginTop: 2,
   },
   logo: {
     width: 32,
     height: 32,
   },
+
+
 });

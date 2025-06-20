@@ -305,7 +305,7 @@ export default function ProductDetail({ route, navigation }) {
           {/* Phần bình luận */}
           <View style={styles.commentsSection}>
             <Text style={styles.commentsTitle}>Bình luận</Text>
-            <ScrollView></ScrollView>
+            
             {/* Comment input */}
             <View style={styles.commentInputContainer}>
               <TextInput
