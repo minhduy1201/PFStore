@@ -13,10 +13,12 @@ export const api = axios.create({
 
 export const Logout = async (navigation) => {
   try {
+    // Xoá token và userId khỏi AsyncStorage
     await AsyncStorage.removeItem("token");
-    await AsyncStorage.removeItem("user");
-    Alert.alert("Thông báo", "Đã đăng xuất thành công");
+    await AsyncStorage.removeItem("userId");
+    await AsyncStorage.removeItem("user_current");
     navigation.replace("Login");
+    Alert.alert("Thông báo", "Đã đăng xuất thành công");
   } catch (error) {
     console.error("Lỗi khi đăng xuất:", error);
   }

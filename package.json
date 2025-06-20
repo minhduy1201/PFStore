@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "^2.1.2",
+    "@react-native-community/datetimepicker": "^8.3.0",
     "@react-native-google-signin/google-signin": "^14.0.1",
     "@react-native-picker/picker": "^2.11.0",
     "@react-navigation/bottom-tabs": "^7.3.12",
@@ -18,18 +19,28 @@
     "@react-navigation/native-stack": "^7.3.12",
     "axios": "^1.9.0",
     "clear": "^0.1.0",
+<<<<<<< HEAD
     "expo": "^53.0.12",
     "expo-auth-session": "^6.2.0",
+=======
+    "expo": "53.0.12",
+    "expo-auth-session": "~6.2.0",
+>>>>>>> 5d54cb0f36bcc773713e5986c6f0b1bc6c3c59b7
     "expo-image-picker": "^16.1.4",
     "expo-random": "^14.0.1",
     "expo-status-bar": "~2.2.3",
     "expo-web-browser": "~14.2.0",
     "pfstore": "file:",
     "react": "19.0.0",
+<<<<<<< HEAD
     "react-native": "^0.79.4",
+=======
+    "react-native": "0.79.4",
+>>>>>>> 5d54cb0f36bcc773713e5986c6f0b1bc6c3c59b7
     "react-native-dropdown-picker": "^5.4.6",
     "react-native-gesture-handler": "~2.24.0",
     "react-native-keyboard-aware-scroll-view": "^0.9.5",
+    "react-native-modal-datetime-picker": "^18.0.0",
     "react-native-reanimated": "~3.17.4",
     "react-native-safe-area-context": "^5.4.0",
     "react-native-screens": "~4.11.1",
