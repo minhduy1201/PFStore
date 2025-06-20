@@ -2,6 +2,7 @@
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Alert } from "react-native";
+import { logoutUser } from "./AuthenticationService";
 const API_BASE_URL = "https://1368-115-79-219-34.ngrok-free.app/api";
 
 // Tạo một instance của axios
@@ -14,11 +15,12 @@ export const api = axios.create({
 
 export const Logout = async (navigation) => {
   try {
+    // Xoá token và userId khỏi AsyncStorage
     await AsyncStorage.removeItem("token");
-    await AsyncStorage.removeItem("user");
-    navigation.navigatione("Login");
-    Alert.alert("Thông báo", "Đã đăng xuất thành công");
+    await AsyncStorage.removeItem("userId");
+    await AsyncStorage.removeItem("user_current");
     navigation.replace("Login");
+    Alert.alert("Thông báo", "Đã đăng xuất thành công");
   } catch (error) {
     console.error("Lỗi khi đăng xuất:", error);
   }
