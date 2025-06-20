@@ -7,7 +7,7 @@ import {
   ScrollView,
   Alert,
 } from "react-native";
-import { MaterialIcons } from "@expo/vector-icons"; // Sử dụng MaterialIcons cho mũi tên
+import { MaterialIcons } from "@expo/vector-icons";
 import { Logout } from "../servers/connection";
 
 const ProfileScreen = ({ navigation }) => {
@@ -84,8 +84,8 @@ const ProfileScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8f8f8", // Màu nền nhẹ cho toàn bộ màn hình
-    paddingTop: 80, // Khoảng cách từ đầu màn hình
+    backgroundColor: "#f8f8f8",
+    paddingTop: 80, 
   },
   header: {
     fontSize: 28,
@@ -106,9 +106,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     marginHorizontal: 15,
     borderRadius: 10,
-    overflow: "hidden", // Đảm bảo đường kẻ nằm gọn trong border radius
+    overflow: "hidden",
     shadowRadius: 3,
-    elevation: 3, // Elevation cho Android
+    elevation: 3, 
     marginBottom: 20,
   },
   menuItem: {
