@@ -31,6 +31,7 @@ import EditProfileScreen from "./src/screens/EditProfileScreen";
 import ProductByCategory from "./src/screens/ProductByCategory";
 
 import SearchProductsScreen from "./src/screens/SearchProductsScreen";
+import CreatePostScreen from "./src/screens/CreatePostScreen";
 
 // import SettingsScreen from './src/screens/Settings/SettingsScreen';
 
@@ -136,7 +137,9 @@ export default function App() {
         <Stack.Screen name="ProductDetail" component={ProductDetail} />
         <Stack.Screen name="AppInfo" component={AppInfoScreen} />
         <Stack.Screen name="ProductByCat" component={ProductByCategory} />
-
+ <Stack.Screen name="CreatePost" component={CreatePostScreen} 
+ styles={styles.safeArea}
+ />
         <Stack.Screen name="OrderDetails" component={OrderDetailsScreen} />
         <Stack.Screen name="ManageOrders" component={ManageOrdersScreen} />
         <Stack.Screen name="Wishlist" component={WishlistScreen} />
