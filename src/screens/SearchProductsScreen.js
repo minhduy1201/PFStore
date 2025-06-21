@@ -16,7 +16,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { GetCategories, getProducts } from "../servers/ProductService";
 import ProductCard from "../components/ProductCard";
-import { BRANDS } from "../screens/CreatePostScreen";
+import { BRANDS } from '../screens/CreatePostScreen';
 
 export default function SearchProductsScreen({ route, navigation }) {
   const { keyword } = route.params; // Nhận từ khóa tìm kiếm từ HomeScreen
@@ -97,34 +97,28 @@ export default function SearchProductsScreen({ route, navigation }) {
 
   // Xử lý áp dụng lọc
   const applyFilter = () => {
-    let filtered = products.filter(
-      (product) => product.title.toLowerCase().includes(keyword.toLowerCase()) // Giữ lại từ khóa tìm kiếm
+
+    let filtered = products.filter(product =>
+      product.title.toLowerCase().includes(keyword.toLowerCase()) // Giữ lại từ khóa tìm kiếm
     );
 
     // Lọc theo thương hiệu
     if (selectedBrands.length > 0) {
-      filtered = filtered.filter((product) =>
-        selectedBrands.includes(product.brand)
-      );
+      filtered = filtered.filter(product => selectedBrands.includes(product.brand));
+
     }
 
     // Lọc theo danh mục
     if (selectedCategories.length > 0) {
-      filtered = filtered.filter((product) =>
-        selectedCategories.includes(product.category)
-      );
+      filtered = filtered.filter(product => selectedCategories.includes(product.category));
     }
 
     // Lọc theo giá
     if (minPrice) {
-      filtered = filtered.filter(
-        (product) => product.price >= parseFloat(minPrice)
-      );
+      filtered = filtered.filter(product => product.price >= parseFloat(minPrice));
     }
     if (maxPrice) {
-      filtered = filtered.filter(
-        (product) => product.price <= parseFloat(maxPrice)
-      );
+      filtered = filtered.filter(product => product.price <= parseFloat(maxPrice));
     }
 
     setFilteredProducts(filtered); // Cập nhật lại danh sách sản phẩm đã lọc
@@ -224,8 +218,8 @@ export default function SearchProductsScreen({ route, navigation }) {
                       key={bra.value}
                       style={[
                         styles.categoryItem,
-                        selectedBrands.includes(bra.value) &&
-                          styles.selectedCategory,
+
+                        selectedBrands.includes(bra.value) && styles.selectedCategory,
                       ]}
                       onPress={() => toggleBrandSelection(bra.value)}
                     >
