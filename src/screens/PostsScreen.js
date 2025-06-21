@@ -15,6 +15,8 @@ import {
 import ProductCard from "../components/ProductCard";
 import { fetchUserPosts, deletePost } from "../servers/ProductService"; // Import hàm fetchUserPosts và deletePost
 import { MaterialIcons } from "@expo/vector-icons"; // Để icon thêm sản phẩm
+import AsyncStorage from "@react-native-async-storage/async-storage"; // Để lưu trữ userId
+import { handleApiError } from "../servers/connection"; // Import hàm xử lý lỗi chung
 
 const PostsScreen = ({ navigation }) => {
   const [posts, setPosts] = useState([]);
@@ -22,42 +24,36 @@ const PostsScreen = ({ navigation }) => {
   const [error, setError] = useState(null);
   const [refreshing, setRefreshing] = useState(false); // State cho pull-to-refresh
 
-  // Hàm tải dữ liệu sản phẩm của người dùng
-  const loadPosts = async () => {
-    try {
-      setLoading(true); // Đặt loading khi bắt đầu tải
-      setError(null);
-      const data = await fetchUserPosts(); // GỌI HÀM MỚI TỪ PRODUCT SERVICE
-      setPosts(data);
-    } catch (err) {
-      setError("Không thể tải danh sách sản phẩm của bạn. Vui lòng thử lại.");
-      console.error("Lỗi khi tải bài đăng của người dùng:", err);
-    } finally {
-      setLoading(false); // Kết thúc tải
-      setRefreshing(false); // Tắt refreshing
-    }
-  };
-
-  // Callback cho pull-to-refresh
-  const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    loadPosts();
-  }, []);
-
+  const [userId, setUserId] = useState(null); // State để lưu userId
   useEffect(() => {
-    loadPosts();
+    const init = async () => {
+      try {
+        const id = await AsyncStorage.getItem("userId");
+        if (id && !isNaN(Number(id))) {
+          const numericId = Number(id);
+          setUserId(numericId);
+          await loadPosts(numericId);
+        } else {
+          Alert.alert("Lỗi", "userId không hợp lệ.");
+        }
+      } catch (e) {
+        Alert.alert("Lỗi", "Không lấy được userId từ bộ nhớ.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    init();
   }, []);
 
   // Hàm xử lý khi người dùng nhấn vào một sản phẩm (xem chi tiết)
   const handleProductPress = (product) => {
-    Alert.alert("Xem chi tiết", `Bạn đã chọn xem chi tiết: ${product.name}`);
-    // navigation.navigate('ProductDetail', { productId: product.id });
+    navigation.navigate("ProductDetail", { productId: product });
   };
 
   // Hàm xử lý khi người dùng nhấn nút "Chỉnh sửa"
   const handleEditProduct = (product) => {
     Alert.alert("Chỉnh sửa", `Bạn muốn chỉnh sửa sản phẩm: ${product.name}`);
-    // navigation.navigate('EditProduct', { product: product }); // Truyền object sản phẩm để chỉnh sửa
+    // navigation.navigate('EditProduct', { productId: product }); // Truyền object sản phẩm để chỉnh sửa
   };
 
   // Hàm xử lý khi người dùng nhấn nút "Xóa"
@@ -82,7 +78,10 @@ const PostsScreen = ({ navigation }) => {
               );
               // Cập nhật lại danh sách sản phẩm sau khi xóa thành công
               setPosts((prevPosts) =>
-                prevPosts.filter((post) => post.id !== productId)
+                prevPosts.filter(
+                  (post) =>
+                    post.productId !== productId && post.id !== productId // lọc cả 2 trường
+                )
               );
             } catch (err) {
               // Lỗi đã được handleApiError xử lý hiển thị Alert
@@ -98,13 +97,30 @@ const PostsScreen = ({ navigation }) => {
     );
   };
 
+  const loadPosts = async (uid = userId) => {
+    try {
+      setLoading(true);
+      console.log("Gửi request với userId:", uid);
+      const data = await fetchUserPosts(uid);
+      console.log("✅ Dữ liệu sản phẩm người dùng:", data);
+      setPosts(data);
+      setError(null);
+    } catch (err) {
+      console.error("Lỗi khi fetch user posts:", err);
+      setError("Không thể tải danh sách sản phẩm của bạn. Vui lòng thử lại.");
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    loadPosts();
+  }, []);
+
   // Hàm xử lý khi người dùng nhấn nút "Đăng sản phẩm mới"
   const handleCreateNewPost = () => {
-    Alert.alert(
-      "Thông báo",
-      "Chức năng tạo bài đăng mới sẽ được triển khai tại đây."
-    );
-    // navigation.navigate('CreatePost'); // Chuyển sang màn hình tạo bài đăng mới
+    navigation.navigate('CreatePost'); // Chuyển sang màn hình tạo bài đăng mới
   };
 
   // --- Conditional Rendering ---
@@ -156,7 +172,11 @@ const PostsScreen = ({ navigation }) => {
       ) : (
         <FlatList
           data={posts}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item, index) =>
+            item?.id?.toString?.() || index.toString()
+          }
+          initialNumToRender={10} // Giảm tải ban đầu
+          maxToRenderPerBatch={10} // Giảm tải khi cuộn
           renderItem={({ item }) => (
             <ProductCard
               product={item}
