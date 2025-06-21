@@ -1,8 +1,25 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, TextInput, TouchableOpacity, Alert, Modal, TouchableWithoutFeedback, Keyboard, Dimensions } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { GetCategories, getProducts, GetProducts } from '../servers/ProductService';
+import React, { useEffect, useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Image,
+  TextInput,
+  TouchableOpacity,
+  Alert,
+  Modal,
+  TouchableWithoutFeedback,
+  Keyboard,
+  Dimensions,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import {
+  GetCategories,
+  getProducts,
+  GetProducts,
+} from "../servers/ProductService";
 
 const { width } = Dimensions.get("window");
 
@@ -65,13 +82,12 @@ export default function HomeScreen({ navigation }) {
     navigation.navigate("SearchProducts", { keyword }); // Chuyển sang màn hình SearchProducts với từ khóa
   };
 
-
   return (
     <ScrollView style={styles.container}>
       {/* Thanh tìm kiếm */}
       <View style={styles.header}>
         <Image
-          source={require('../../assets/images/logo.jpg')}
+          source={require("../../assets/images/logo.jpg")}
           style={styles.logo}
           resizeMode="contain"
         />
@@ -124,7 +140,6 @@ export default function HomeScreen({ navigation }) {
           ))}
         </ScrollView>
       </View>
-
       {/* Products */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
