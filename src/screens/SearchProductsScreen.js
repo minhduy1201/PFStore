@@ -3,11 +3,12 @@ import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert, Modal, Tou
 import { Ionicons } from '@expo/vector-icons';
 import { GetCategories, getProducts } from '../servers/ProductService';
 import ProductCard from "../components/ProductCard";
+import { BRANDS } from '../screens/CreatePostScreen';
 
 export default function SearchProductsScreen({ route, navigation }) {
   const { keyword } = route.params; // Nhận từ khóa tìm kiếm từ HomeScreen
   const [categories, setCategories] = useState([]);
-  const [brands, setBrands] = useState([]);
+  const [brands, setBrands] = useState(BRANDS);
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [showFilter, setShowFilter] = useState(false);
@@ -42,7 +43,7 @@ export default function SearchProductsScreen({ route, navigation }) {
       );
       setFilteredProducts(filtered);
     } else {
-      Alert.alert("Không tìm thấy sản phẩm");
+      setFilteredProducts([]);
     }
   }, [keyword, products]);
 
@@ -69,23 +70,6 @@ export default function SearchProductsScreen({ route, navigation }) {
     loadCategories();
   }, []);
 
-  useEffect(() => {
-    const loadBrands = async () => {
-      try {
-        const res = await GetBrands();
-        if (res && Array.isArray(res)) {
-          setBrands(res);
-        } else {
-          Alert.alert("Lỗi", "Không thể tải danh sách thương hiệu");
-        }
-      } catch (error) {
-        Alert.alert("Lỗi", "Đã xảy ra lỗi khi tải danh sách thương hiệu");
-        console.log("Load category error:", error);
-      }
-    };
-    loadBrands();
-  }, []);
-
   // Xử lý mở/đóng filter popupAdd commentMore actions.
   const toggleFilter = () => {
     setShowFilter(!showFilter);
@@ -103,9 +87,30 @@ export default function SearchProductsScreen({ route, navigation }) {
 
   // Xử lý áp dụng lọc
   const applyFilter = () => {
-    // lọc sản phẩm theo các lựa chọn đã chọn
-    console.log('Applied Filters:', { selectedBrands, selectedSizes, minPrice, maxPrice });
-    setShowFilter(false);
+    let filtered = products.filter(product =>
+      product.title.toLowerCase().includes(keyword.toLowerCase()) // Giữ lại từ khóa tìm kiếm
+    );
+
+    // Lọc theo thương hiệu
+    if (selectedBrands.length > 0) {
+      filtered = filtered.filter(product => selectedBrands.includes(product.brand));
+    }
+
+    // Lọc theo danh mục
+    if (selectedCategories.length > 0) {
+      filtered = filtered.filter(product => selectedCategories.includes(product.category));
+    }
+
+    // Lọc theo giá
+    if (minPrice) {
+      filtered = filtered.filter(product => product.price >= parseFloat(minPrice));
+    }
+    if (maxPrice) {
+      filtered = filtered.filter(product => product.price <= parseFloat(maxPrice));
+    }
+
+    setFilteredProducts(filtered); // Cập nhật lại danh sách sản phẩm đã lọc
+    setShowFilter(false); // Đóng popup lọc sau khi áp dụng
   };
 
   // Hàm để toggle chọn thương hiệu
@@ -114,15 +119,6 @@ export default function SearchProductsScreen({ route, navigation }) {
       setSelectedBrands(selectedBrands.filter(b => b !== brand)); // Bỏ chọn nếu đã chọn
     } else {
       setSelectedBrands([...selectedBrands, brand]); // Thêm vào danh sách đã chọn
-    }
-  };
-
-  // Hàm để toggle chọn size
-  const toggleSizeSelection = (size) => {
-    if (selectedSizes.includes(size)) {
-      setSelectedSizes(selectedSizes.filter(s => s !== size));  // Bỏ chọn size nếu đã chọn
-    } else {
-      setSelectedSizes([...selectedSizes, size]);  // Thêm size vào danh sách đã chọn
     }
   };
 
@@ -195,18 +191,26 @@ export default function SearchProductsScreen({ route, navigation }) {
 
               {/* Thương hiệu */}
               <Text style={styles.filterLabel}>Thương hiệu</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoriesScrollContainer}>
-                <View style={styles.brands}>
+              <View style={styles.categories}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.categoriesScrollContainer}
+                >
                   {brands.map((bra) => (
                     <TouchableOpacity
-                      key={bra.brandId.toString()}
-                      style={[styles.categoryItem, selectedBrands.includes(bra.name) && styles.selectedCategory]}
-                      onPress={() => toggleBrandSelection(bra.name)}>
-                      <Text style={styles.categoryText}>{bra.name}</Text>
+                      key={bra.value}
+                      style={[
+                        styles.categoryItem,
+                        selectedBrands.includes(bra.value) && styles.selectedCategory,
+                      ]}
+                      onPress={() => toggleBrandSelection(bra.value)}
+                    >
+                      <Text style={styles.categoryText}>{bra.label}</Text>
                     </TouchableOpacity>
                   ))}
-                </View>
-              </ScrollView>
+                </ScrollView>
+              </View>
 
               {/* Danh mục */}
               <Text style={styles.filterLabel}>Danh Mục</Text>
