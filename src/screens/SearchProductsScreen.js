@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert, Modal, TouchableWithoutFeedback, Keyboard, Image, TextInput, FlatList } from "react-native";
 import { Ionicons } from '@expo/vector-icons';
-import { searchProducts } from "../servers/ProductService";
-import { GetCategories, GetBrands } from '../servers/ProductService';
+import { GetCategories, getProducts } from '../servers/ProductService';
 import ProductCard from "../components/ProductCard";
 
 export default function SearchProductsScreen({ route, navigation }) {
@@ -10,6 +9,7 @@ export default function SearchProductsScreen({ route, navigation }) {
   const [categories, setCategories] = useState([]);
   const [brands, setBrands] = useState([]);
   const [products, setProducts] = useState([]);
+  const [filteredProducts, setFilteredProducts] = useState([]);
   const [showFilter, setShowFilter] = useState(false);
   const [selectedBrands, setSelectedBrands] = useState([]);
   const [selectedSizes, setSelectedSizes] = useState([]);
@@ -22,8 +22,10 @@ export default function SearchProductsScreen({ route, navigation }) {
     // Tìm kiếm sản phẩm khi màn hình được render
     const fetchProducts = async () => {
       try {
-        const result = await searchProducts(keyword);
-        setProducts(result);
+        const result = await getProducts();
+        if (result) {
+          setProducts(result);
+        }
       } catch (error) {
         setError("Không thể tìm thấy sản phẩm. Vui lòng thử lại.");
         console.error("Lỗi khi tìm kiếm sản phẩm", error);
@@ -31,7 +33,18 @@ export default function SearchProductsScreen({ route, navigation }) {
     };
 
     fetchProducts();
-  }, [keyword]);
+  }, []);
+
+  useEffect(() => {
+    if (keyword) {
+      const filtered = products.filter(product =>
+        product.title.toLowerCase().includes(keyword.toLowerCase())
+      );
+      setFilteredProducts(filtered);
+    } else {
+      Alert.alert("Không tìm thấy sản phẩm");
+    }
+  }, [keyword, products]);
 
   // Hàm xử lý khi người dùng nhấn vào một sản phẩm (xem chi tiết)
   const handleProductPress = (product) => {
@@ -133,35 +146,35 @@ export default function SearchProductsScreen({ route, navigation }) {
 
 
       {/* Hiển thị sản phẩm tìm thấy */}
-      {products.length > 0 ? (
-        /*
-        products.map((product) => (
-          <TouchableOpacity 
-          numColumns={2}
-          contentContainerStyle={styles.listContentContainer}
-          columnWrapperStyle={styles.row}
-          showsVerticalScrollIndicator={false}>
-            <Text>{product.name}</Text>
-            <Text>{product.price}</Text>
-          </TouchableOpacity>
-        )) */
-
-
-        <FlatList
-          data={products}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <ProductCard
-              product={item}
-              onPress={handleProductPress}
-            />
-          )}
-          numColumns={2}
-          contentContainerStyle={styles.listContentContainer}
-          columnWrapperStyle={styles.row}
-          showsVerticalScrollIndicator={false}
-        />
-        
+      {filteredProducts.length > 0 ? (
+        <View style={styles.productsGridContainer}>
+          {filteredProducts.map((prod, index) => (
+            <TouchableOpacity
+              key={index}
+              style={styles.productCard}
+              onPress={() => navigation.navigate("ProductDetail", { productId: prod.productId })}
+              activeOpacity={0.85}
+            >
+              {prod.productImages && prod.productImages.length > 0 ? (
+                <Image
+                  source={{ uri: prod.productImages[0].imageUrl }}
+                  style={styles.productImage}
+                  resizeMode="cover"
+                />
+              ) : (
+                <View style={styles.productImagePlaceholder}>
+                  <Text style={{ color: "#aaa" }}>No Image</Text>
+                </View>
+              )}
+              <View style={styles.productInfo}>
+                <Text style={styles.productTitle}>{prod.title}</Text>
+                <Text style={styles.productPrice}>
+                  {prod.price.toLocaleString("vi-VN")} VNĐ
+                </Text>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
       ) : (
         <Text>Không có sản phẩm nào phù hợp với từ khóa "{keyword}"</Text>
       )}
@@ -269,11 +282,25 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginBottom: 20,
   },
+  productsGridContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    paddingHorizontal: 8,
+    paddingTop: 10,
+    paddingBottom: 20,
+  },
   productCard: {
-    padding: 10,
-    borderWidth: 1,
-    marginBottom: 10,
-    borderColor: "#ccc",
+    backgroundColor: "#f1f1f1",
+    borderRadius: 10,
+    width: "48%", // Đảm bảo 2 cột đều nhau
+    marginBottom: 16,
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    overflow: "hidden",
   },
   categoriesScrollContainer: {
     flexDirection: "row",
@@ -297,23 +324,37 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: "#333",
   },
-
-  productCard: {
-    width: 120,
-    marginRight: 16,
-  },
   productImage: {
-    width: '100%',
-    height: 100,
-    borderRadius: 10,
-    backgroundColor: '#eee',
+    width: "100%",
+    height: 160,
+    borderTopLeftRadius: 10,
+    borderTopRightRadius: 10,
+    backgroundColor: "#f0f0f0",
+  },
+  productImagePlaceholder: {
+    width: "100%",
+    height: 160,
+    backgroundColor: "#f0f0f0",
+    justifyContent: "center",
+    alignItems: "center",
+    borderTopLeftRadius: 10,
+    borderTopRightRadius: 10,
+  },
+  productInfo: {
+    padding: 12,
+    alignItems: "flex-start",
   },
   productTitle: {
-    marginTop: 5,
-    fontSize: 14,
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#222",
+    marginBottom: 6,
+    minHeight: 36,
   },
   productPrice: {
-    fontWeight: 'bold',
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#e63946",
     marginTop: 2,
   },
   logo: {
