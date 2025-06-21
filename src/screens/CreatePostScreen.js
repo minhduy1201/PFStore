@@ -18,7 +18,7 @@ import {
   CreateProductPost,
 } from "../servers/ProductService";
 
-const BRANDS = [
+export const BRANDS = [
   { label: "Nike", value: "Nike" },
   { label: "Adidas", value: "Adidas" },
   { label: "Puma", value: "Puma" },
