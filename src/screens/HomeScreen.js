@@ -1,27 +1,8 @@
-import React, { useEffect, useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  Image,
-  TextInput,
-  TouchableOpacity,
-  Alert,
-  Modal,
-  TouchableWithoutFeedback,
-  Keyboard,
-  Dimensions,
-} from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import {
-  GetCategories,
-  getProducts,
-  GetProducts,
-} from "../servers/ProductService";
-
-const { width } = Dimensions.get("window");
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, Image, TextInput, TouchableOpacity, Alert, Modal, TouchableWithoutFeedback, Keyboard } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { GetCategories, getProducts, GetProducts } from '../servers/ProductService';
 
 export default function HomeScreen({ navigation }) {
   const [categories, setCategories] = useState([]);
@@ -82,30 +63,29 @@ export default function HomeScreen({ navigation }) {
     navigation.navigate("SearchProducts", { keyword }); // Chuyển sang màn hình SearchProducts với từ khóa
   };
 
+
+
   return (
     <ScrollView style={styles.container}>
       {/* Thanh tìm kiếm */}
       <View style={styles.header}>
         <Image
-          source={require("../../assets/images/logo.jpg")}
+          source={require('../../assets/images/logo.jpg')}
           style={styles.logo}
           resizeMode="contain"
         />
-        <View style={styles.searchBox}>
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Tìm kiếm sản phẩm"
-            value={keyword}
-            onChangeText={setKeyword}
-            onSubmitEditing={handleSearch}
-          />
-          <TouchableOpacity onPress={handleSearch} style={styles.searchButton}>
-            <Ionicons name="search" size={20} color="#fff" />
-          </TouchableOpacity>
-        </View>
+        <TextInput 
+        style={styles.searchInput} 
+        placeholder="Tìm kiếm sản phẩm"
+        value={keyword}
+        onChangeText={(text) => setKeyword(text)}
+        />
+        <TouchableOpacity onPress={handleSearch} style={styles.searchButton}>
+          <Ionicons name="search" size={24} color="black" />
+        </TouchableOpacity>
       </View>
 
-      {/* Banner */}
+      {/* Promotion Banner */}
       <View style={styles.banner}>
         <Image
           source={require("../../assets/images/banner.png")}
@@ -117,8 +97,12 @@ export default function HomeScreen({ navigation }) {
       {/* Categories */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          {/* <Text style={styles.sectionTitle}>Danh Mục</Text> */}
+          <Text style={styles.sectionTitle}>Danh Mục</Text>
+          <TouchableOpacity>
+            <Ionicons name="chevron-forward" size={20} />
+          </TouchableOpacity>
         </View>
+
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -144,7 +128,12 @@ export default function HomeScreen({ navigation }) {
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Sản phẩm</Text>
+          <TouchableOpacity>
+            <Ionicons name="chevron-forward" size={20} />
+          </TouchableOpacity>
         </View>
+
+        {/* This is the new container for vertical, two-column product display */}
         <View style={styles.productsGridContainer}>
           {products.map((prod, index) => (
             <TouchableOpacity
@@ -169,11 +158,9 @@ export default function HomeScreen({ navigation }) {
                 </View>
               )}
               <View style={styles.productInfo}>
-                <Text style={styles.productTitle} numberOfLines={2}>
-                  {prod.title}
-                </Text>
-                <Text style={styles.productPriceText}>
-                  {prod.price.toLocaleString("vi-VN")}₫
+                <Text style={styles.productTitle}>{prod.title}</Text>
+                <Text style={styles.productPrice}>
+                  {prod.price.toLocaleString("vi-VN")} VNĐ
                 </Text>
               </View>
             </TouchableOpacity>
