@@ -492,12 +492,6 @@ useEffect(() => {
             />
             <Text style={styles.fullNameText}>{profileData.fullName}</Text>
           </TouchableOpacity>
-          {/* <TouchableOpacity
-            style={styles.updateAvatarButton}
-            onPress={handlePickAvatar}
-          >
-            <Text style={styles.updateAvatarText}>update</Text>
-          </TouchableOpacity> */}
         </View>
 
         {/* --- Thông tin tài khoản --- */}
