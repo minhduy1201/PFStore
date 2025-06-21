@@ -1,8 +1,24 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, TextInput, TouchableOpacity, Alert, Modal, TouchableWithoutFeedback, Keyboard } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { GetCategories, getProducts, GetProducts } from '../servers/ProductService';
+import React, { useEffect, useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Image,
+  TextInput,
+  TouchableOpacity,
+  Alert,
+  Modal,
+  TouchableWithoutFeedback,
+  Keyboard,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import {
+  GetCategories,
+  getProducts,
+  GetProducts,
+} from "../servers/ProductService";
 
 export default function HomeScreen({ navigation }) {
   const [categories, setCategories] = useState([]);
@@ -63,14 +79,12 @@ export default function HomeScreen({ navigation }) {
     navigation.navigate("SearchProducts", { keyword }); // Chuyển sang màn hình SearchProducts với từ khóa
   };
 
-
-
   return (
     <ScrollView style={styles.container}>
       {/* Thanh tìm kiếm */}
       <View style={styles.header}>
         <Image
-          source={require('../../assets/images/logo.jpg')}
+          source={require("../../assets/images/logo.jpg")}
           style={styles.logo}
           resizeMode="contain"
         />
@@ -119,7 +133,7 @@ export default function HomeScreen({ navigation }) {
           ))}
         </ScrollView>
       </View>
-  {/* Products */}
+      {/* Products */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Sản phẩm</Text>
@@ -238,23 +252,21 @@ const styles = StyleSheet.create({
     marginRight: 16,
   },
   productImage: {
-    width: '100%',
+    width: "100%",
     height: 100,
     borderRadius: 10,
-    backgroundColor: '#eee',
+    backgroundColor: "#eee",
   },
   productTitle: {
     marginTop: 5,
     fontSize: 14,
   },
   productPrice: {
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginTop: 2,
   },
   logo: {
     width: 32,
     height: 32,
   },
-
-
 });

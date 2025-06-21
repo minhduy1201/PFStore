@@ -28,6 +28,7 @@ import {
   deleteComment,
   getCommentByProId,
 } from "../servers/CommentService";
+import { addCart } from "../servers/CartService";
 
 const { width } = Dimensions.get("window");
 
@@ -285,6 +286,25 @@ export default function ProductDetail({ route, navigation }) {
       );
     } finally {
       setFavoriteLoading(false);
+    }
+  };
+
+  //hàm xử lý thêm vào giỏ hàng
+  const handleAddCart = async () => {
+    const quantity = 1;
+    try {
+      await addCart(productId, quantity);
+      Alert.alert("Thành công", "Đi đến giỏ hàng", [
+        { text: "Hủy", style: "cancel" },
+        {
+          text: "OK",
+          onPress: () => {
+            navigation.navigate("CartScreen");
+          },
+        },
+      ]);
+    } catch (error) {
+      console.log("Lỗi khi thêm vào giỏ hàng");
     }
   };
 
@@ -688,7 +708,10 @@ export default function ProductDetail({ route, navigation }) {
             />
           )}
         </TouchableOpacity>
-        <TouchableOpacity style={styles.addToCartButton}>
+        <TouchableOpacity
+          style={styles.addToCartButton}
+          onPress={handleAddCart}
+        >
           <Text style={styles.buttonText}>Thêm vào giỏ</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.buyNowButton}>
