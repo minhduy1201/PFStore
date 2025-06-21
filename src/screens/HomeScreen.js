@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, TextInput, TouchableOpacity, Alert, Modal, TouchableWithoutFeedback, Keyboard } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Image, TextInput, TouchableOpacity, Alert, Modal, TouchableWithoutFeedback, Keyboard, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GetCategories, getProducts, GetProducts } from '../servers/ProductService';
+
+const { width } = Dimensions.get("window");
 
 export default function HomeScreen({ navigation }) {
   const [categories, setCategories] = useState([]);
@@ -64,7 +66,6 @@ export default function HomeScreen({ navigation }) {
   };
 
 
-
   return (
     <ScrollView style={styles.container}>
       {/* Thanh tìm kiếm */}
@@ -74,13 +75,21 @@ export default function HomeScreen({ navigation }) {
           style={styles.logo}
           resizeMode="contain"
         />
-        <TextInput style={styles.searchInput} placeholder="Tìm kiếm sản phẩm" />
-        <TouchableOpacity onPress={handleSearch} style={styles.searchButton}>
-          <Ionicons name="search" size={24} color="black" />
-        </TouchableOpacity>
+        <View style={styles.searchBox}>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Tìm kiếm sản phẩm"
+            value={keyword}
+            onChangeText={setKeyword}
+            onSubmitEditing={handleSearch}
+          />
+          <TouchableOpacity onPress={handleSearch} style={styles.searchButton}>
+            <Ionicons name="search" size={20} color="#fff" />
+          </TouchableOpacity>
+        </View>
       </View>
 
-      {/* Promotion Banner */}
+      {/* Banner */}
       <View style={styles.banner}>
         <Image
           source={require("../../assets/images/banner.png")}
@@ -92,12 +101,8 @@ export default function HomeScreen({ navigation }) {
       {/* Categories */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Danh Mục</Text>
-          <TouchableOpacity>
-            <Ionicons name="chevron-forward" size={20} />
-          </TouchableOpacity>
+          {/* <Text style={styles.sectionTitle}>Danh Mục</Text> */}
         </View>
-
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -119,16 +124,12 @@ export default function HomeScreen({ navigation }) {
           ))}
         </ScrollView>
       </View>
-  {/* Products */}
+
+      {/* Products */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Sản phẩm</Text>
-          <TouchableOpacity>
-            <Ionicons name="chevron-forward" size={20} />
-          </TouchableOpacity>
         </View>
-
-        {/* This is the new container for vertical, two-column product display */}
         <View style={styles.productsGridContainer}>
           {products.map((prod, index) => (
             <TouchableOpacity
@@ -139,17 +140,25 @@ export default function HomeScreen({ navigation }) {
                   productId: prod.productId,
                 })
               }
+              activeOpacity={0.85}
             >
-              {prod.productImages && prod.productImages.length > 0 && (
+              {prod.productImages && prod.productImages.length > 0 ? (
                 <Image
                   source={{ uri: prod.productImages[0].imageUrl }}
                   style={styles.productImage}
+                  resizeMode="cover"
                 />
+              ) : (
+                <View style={styles.productImagePlaceholder}>
+                  <Text style={{ color: "#aaa" }}>No Image</Text>
+                </View>
               )}
               <View style={styles.productInfo}>
-                <Text style={styles.productTitle}>{prod.title}</Text>
-                <Text style={styles.productPrice}>
-                  {prod.price.toLocaleString("vi-VN")} VNĐ
+                <Text style={styles.productTitle} numberOfLines={2}>
+                  {prod.title}
+                </Text>
+                <Text style={styles.productPriceText}>
+                  {prod.price.toLocaleString("vi-VN")}₫
                 </Text>
               </View>
             </TouchableOpacity>
@@ -164,41 +173,51 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#fff",
-    paddingTop: 30, // Adjust for status bar
+    paddingTop: 30,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 10,
+    padding: 12,
     backgroundColor: "#fff",
   },
   logo: {
-    width: 50,
-    height: 50,
+    width: 36,
+    height: 36,
     marginRight: 10,
+    borderRadius: 8,
+  },
+  searchBox: {
+    flex: 1,
+    flexDirection: "row",
+    backgroundColor: "#f5f6fa",
+    borderRadius: 24,
+    alignItems: "center",
+    paddingHorizontal: 10,
+    marginLeft: 4,
   },
   searchInput: {
     flex: 1,
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
+    height: 38,
+    fontSize: 15,
     paddingHorizontal: 10,
-    height: 40,
-    marginRight: 8,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: "transparent",
+    borderWidth: 0,
   },
   searchButton: {
+    backgroundColor: "#323660",
+    borderRadius: 20,
     padding: 8,
-    marginRight: 8,
+    marginLeft: 6,
   },
   banner: {
-    marginVertical: 10,
+    marginVertical: 12,
     alignItems: "center",
   },
   bannerImage: {
-    width: "100%",
+    width: "96%",
     height: 120,
-    borderRadius: 10,
+    borderRadius: 14,
   },
   section: {
     marginVertical: 10,
@@ -218,43 +237,71 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
   },
   categoryItem: {
-    paddingVertical: 6,
-    paddingHorizontal: 14,
-    borderRadius: 16,
-    backgroundColor: "#f0f0f0",
-    marginRight: 8,
+    paddingVertical: 7,
+    paddingHorizontal: 18,
+    borderRadius: 18,
+    backgroundColor: "#323660",
+    marginRight: 10,
     marginBottom: 5,
-  },
-  selectedCategory: {
-    backgroundColor: "#007bff",
+    borderWidth: 1,
+    borderColor: "#e0e0e0",
   },
   categoryText: {
-    fontSize: 14,
-    color: "#333",
+    fontSize: 15,
+    color: "#fff",
+    fontWeight: "500",
   },
-
+  productsGridContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    paddingHorizontal: 8,
+    paddingTop: 10,
+    paddingBottom: 20,
+  },
   productCard: {
-    width: 120,
-    marginRight: 16,
+    backgroundColor: "#f1f1f1",
+    borderRadius: 10,
+    width: "48%", // Đảm bảo 2 cột đều nhau
+    marginBottom: 16,
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    overflow: "hidden",
   },
   productImage: {
-    width: '100%',
-    height: 100,
-    borderRadius: 10,
-    backgroundColor: '#eee',
+    width: "100%",
+    height: 160,
+    borderTopLeftRadius: 10,
+    borderTopRightRadius: 10,
+    backgroundColor: "#f0f0f0",
+  },
+  productImagePlaceholder: {
+    width: "100%",
+    height: 160,
+    backgroundColor: "#f0f0f0",
+    justifyContent: "center",
+    alignItems: "center",
+    borderTopLeftRadius: 10,
+    borderTopRightRadius: 10,
+  },
+  productInfo: {
+    padding: 12,
+    alignItems: "flex-start",
   },
   productTitle: {
-    marginTop: 5,
-    fontSize: 14,
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#222",
+    marginBottom: 6,
+    minHeight: 36,
   },
-  productPrice: {
-    fontWeight: 'bold',
+  productPriceText: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#e63946",
     marginTop: 2,
   },
-  logo: {
-    width: 32,
-    height: 32,
-  },
-
-
 });
