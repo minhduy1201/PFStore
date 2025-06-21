@@ -13,15 +13,15 @@ export const GetCategories = async () => {
 };
 
 //Lấy danh sách các thương hiệu
-export const GetBrands = async () => {
-  try {
-    const response = await api.get("/Brands");
-    return response.data;
-  } catch (error) {
-    handleApiError(error, "Lỗi khi lấy danh sách thương hiệu");
-    return null;
-  }
-};
+// export const GetBrands = async () => {
+//   try {
+//     const response = await api.get("/Brands");
+//     return response.data;
+//   } catch (error) {
+//     handleApiError(error, "Lỗi khi lấy danh sách thương hiệu");
+//     return null;
+//   }
+// };
 
 //Lấy danh sách các sản phẩm
 export const getProducts = async () => {
@@ -101,95 +101,84 @@ const MOCK_USER_POSTS_DATA = [
 ];
 
 // Hàm lấy danh sách các sản phẩm do người dùng hiện tại đăng bán
-export const fetchUserPosts = async () => {
+export const fetchUserPosts = async (userId) => {
   try {
-    // --- MÔ PHỎNG API CALL ---
-    await new Promise((resolve) => setTimeout(resolve, 1500)); // Giả lập độ trễ 1.5 giây
-    console.log("Mock API: Đang lấy danh sách sản phẩm của người dùng...");
-
-    // Trong thực tế, bạn sẽ làm như thế này (giả sử backend có endpoint này):
-    // const response = await api.get("/users/me/products"); // Hoặc /my-posts
-    // return response.data.data; // Giả sử dữ liệu nằm trong response.data.data
-
-    return MOCK_USER_POSTS_DATA; // Trả về dữ liệu giả lập
+    const response = await api.get(`/Products/user/${userId}`);
+    console.log("Dữ liệu sản phẩm người dùng:", response.data);
+    return response.data;
   } catch (error) {
-    console.error("Lỗi khi fetch user posts (mock):", error);
+    console.error("Lỗi khi fetch user posts:", error);
     handleApiError(error, "Không thể tải danh sách sản phẩm của bạn.");
     throw error;
   }
 };
 
-// Hàm giả lập việc xóa một sản phẩm
+// Hàm xóa một sản phẩm
 export const deletePost = async (postId) => {
   try {
-    // --- MÔ PHỎNG API CALL ---
-    await new Promise((resolve) => setTimeout(resolve, 800)); // Giả lập độ trễ 0.8 giây
-    console.log(`Mock API: Đang xóa sản phẩm với ID: ${postId}`);
-
-    // Trong thực tế, bạn sẽ làm như thế này:
-    // const response = await api.delete(`/posts/${postId}`); // Giả sử endpoint là /posts/{id} và phương thức DELETE
-    // return response.data;
-
-    // Giả lập kết quả thành công
-    return {
-      message: `Sản phẩm ${postId} đã được xóa thành công (Mock)!`,
-      status: 200,
-    };
+    const response = await api.delete(`/Products/${postId}`);
+    return response.data; // Trả về dữ liệu từ backend
   } catch (error) {
-    console.error("Lỗi khi xóa sản phẩm (mock):", error);
-    handleApiError(error, `Xóa sản phẩm ${postId} thất bại.`);
+    console.error("Lỗi khi xóa sản phẩm:", error);
+    handleApiError(error, "Xóa sản phẩm thất bại.");
     throw error;
   }
 };
 
+
 // Thêm hàm updatePost (mock) để chuẩn bị cho màn hình chỉnh sửa
 export const updatePost = async (postId, updatedProductData) => {
   try {
-    // --- MÔ PHỎNG API CALL ---
-    await new Promise((resolve) => setTimeout(resolve, 800));
-    console.log(
-      `Mock API: Đang cập nhật sản phẩm ${postId}:`,
-      updatedProductData
-    );
-
-    // Trong thực tế, bạn sẽ làm như thế này:
-    // const response = await api.put(`/posts/${postId}`, updatedProductData);
-    // return response.data;
-
+    const response = await api.put(`/Products/${postId}`, updatedProductData);
     return {
-      message: `Sản phẩm ${postId} đã được cập nhật thành công (Mock)!`,
-      status: 200,
+      message: "Sản phẩm đã được cập nhật thành công!",
+      status: response.status,
     };
   } catch (error) {
-    console.error("Lỗi khi cập nhật sản phẩm (mock):", error);
-    handleApiError(error, `Cập nhật sản phẩm ${postId} thất bại.`);
+    console.error("Lỗi khi cập nhật sản phẩm:", error);
+    handleApiError(error, "Cập nhật sản phẩm thất bại.");
+    throw error;
+  }
+};
+export const createPost = async (formData) => {
+  try {
+    const response = await api.post("/Products", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Lỗi khi tạo sản phẩm mới:", error);
+    handleApiError(error, "Đăng sản phẩm mới thất bại.");
     throw error;
   }
 };
 
 // Thêm hàm createPost (mock) để chuẩn bị cho màn hình thêm sản phẩm mới
-export const createPost = async (newProductData) => {
-  try {
-    // --- MÔ PHỎNG API CALL ---
-    await new Promise((resolve) => setTimeout(resolve, 800));
-    const newId = `prod${Date.now()}`; // Tạo ID giả
-    console.log(`Mock API: Đang tạo sản phẩm mới:`, newProductData);
+// export const createPost = async (newProductData) => {
+//   try {
+//     // --- MÔ PHỎNG API CALL ---
+//     await new Promise((resolve) => setTimeout(resolve, 800));
+//     const newId = `prod${Date.now()}`; // Tạo ID giả
+//     console.log(`Mock API: Đang tạo sản phẩm mới:`, newProductData);
 
-    // Trong thực tế, bạn sẽ làm như thế này:
-    // const response = await api.post("/posts", newProductData);
-    // return response.data;
+//     // Trong thực tế, bạn sẽ làm như thế này:
+//     // const response = await api.post("/posts", newProductData);
+//     // return response.data;
 
-    return {
-      id: newId,
-      ...newProductData,
-      message: "Sản phẩm đã được đăng thành công (Mock)!",
-    };
-  } catch (error) {
-    console.error("Lỗi khi tạo sản phẩm mới (mock):", error);
-    handleApiError(error, "Đăng sản phẩm mới thất bại.");
-    throw error;
-  }
-};
+//     return {
+//       id: newId,
+//       ...newProductData,
+//       message: "Sản phẩm đã được đăng thành công (Mock)!",
+//     };
+//   } catch (error) {
+//     console.error("Lỗi khi tạo sản phẩm mới (mock):", error);
+//     handleApiError(error, "Đăng sản phẩm mới thất bại.");
+//     throw error;
+//   }
+// };
+
+
+
 
 // Mô phỏng API tìm kiếm sản phẩm theo từ khóa
 export const searchProducts = async (keyword) => {
