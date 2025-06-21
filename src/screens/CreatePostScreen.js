@@ -13,10 +13,10 @@ import {
 import { Entypo } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import DropDownPicker from "react-native-dropdown-picker";
-import {
-  GetCategories,
-  CreateProductPost,
-} from "../servers/ProductService";
+import { GetCategories } from "../servers/ProductService";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { getUserAddresses } from "../servers/AddressService";
+import { CreatePost } from "../servers/ProductService";
 
 export const BRANDS = [
   { label: "Nike", value: "Nike" },
@@ -29,6 +29,14 @@ export const BRANDS = [
   { label: "Levi's", value: "Levi's" },
   { label: "Other", value: "Khác" },
 ];
+const CONDITIONS = [
+  { label: "Mới", value: "new" },
+  { label: "Như mới", value: "like_new" },
+  { label: "Đã qua sử dụng", value: "used" },
+  { label: "Cũ", value: "old" },
+  { label: "Hư hỏng", value: "broken" },
+];
+
 
 const CreatePostScreen = ({ navigation }) => {
   const [images, setImages] = useState([]);
@@ -39,28 +47,33 @@ const CreatePostScreen = ({ navigation }) => {
   const [brand, setBrand] = useState("");
   const [condition, setCondition] = useState("");
   const [description, setDescription] = useState("");
-  const [useDefaultAddress, setUseDefaultAddress] = useState(true);
-
+const [openCondition, setOpenCondition] = useState(false);
   const [categories, setCategories] = useState([]);
   const [openCategory, setOpenCategory] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
 
   const [attributes, setAttributes] = useState([]);
   const [attributeValues, setAttributeValues] = useState({});
-  const [openSelects, setOpenSelects] = useState({}); // mỗi select mở riêng
+  const [openSelects, setOpenSelects] = useState({});
   const [openBrand, setOpenBrand] = useState(false);
+
+  const [addresses, setAddresses] = useState([]);
+  const [selectedAddressId, setSelectedAddressId] = useState(null);
 
   useEffect(() => {
     fetchCategories();
+    fetchAddresses();
   }, []);
 
   useEffect(() => {
     if (selectedCategoryId !== null) {
-      const selectedCat = categories.find(c => c.categoryId === selectedCategoryId);
+      const selectedCat = categories.find(
+        (c) => c.categoryId === selectedCategoryId
+      );
       if (selectedCat) {
         setAttributes(selectedCat.attributes || []);
         const defaults = {};
-        (selectedCat.attributes || []).forEach(attr => {
+        (selectedCat.attributes || []).forEach((attr) => {
           defaults[attr.attributeId] = "";
         });
         setAttributeValues(defaults);
@@ -82,6 +95,20 @@ const CreatePostScreen = ({ navigation }) => {
     }
   };
 
+  const fetchAddresses = async () => {
+    try {
+      const userId = await AsyncStorage.getItem("userId");
+      if (userId) {
+        const res = await getUserAddresses(userId);
+        setAddresses(res || []);
+        const defaultAddr = res.find((addr) => addr.isDefault);
+        if (defaultAddr) setSelectedAddressId(defaultAddr.addressId);
+      }
+    } catch (err) {
+      setAddresses([]);
+    }
+  };
+
   const pickImage = async () => {
     if (images.length >= 5) {
       Alert.alert("Giới hạn ảnh", "Bạn chỉ có thể chọn tối đa 5 ảnh.");
@@ -97,61 +124,66 @@ const CreatePostScreen = ({ navigation }) => {
   };
 
   const handleSubmit = async () => {
-  if (!title || !price || !selectedCategoryId) {
-    Alert.alert("Thiếu thông tin", "Vui lòng điền đầy đủ các trường bắt buộc.");
-    return;
-  }
+    // if (!title || !price || !selectedCategoryId) {
+    //   Alert.alert(
+    //     "Thiếu thông tin",
+    //     "Vui lòng điền đầy đủ các trường bắt buộc."
+    //   );
+    //   return;
+    // }
 
-  try {
-    const formData = new FormData();
+    try {
+      const userId = await AsyncStorage.getItem("userId");
 
-    formData.append("Title", title);
-    formData.append("Description", description);
-    formData.append("Price", parseFloat(price));
-    formData.append("SalePrice", parseFloat(salePrice || 0));
-    formData.append("Brand", brand);
-    formData.append("Condition", condition);
-    formData.append("CategoryId", selectedCategoryId);
-    formData.append("SellerId", "1"); // TODO: sửa đúng userId từ AsyncStorage
-    formData.append("Location", "TPHCM"); // TODO: lấy địa chỉ hoặc mặc định
-    // formData.append("IsNegotiable", isNegotiable);
-    // formData.append("UseDefaultAddress", useDefaultAddress);
+      const formData = new FormData();
+      formData.append("Title", title);
+      formData.append("Description", description);
+      formData.append("Price", parseFloat(price));
+      formData.append("SalePrice", parseFloat(salePrice || 0));
+      formData.append("Brand", brand);
+      formData.append("Condition", condition);
+      formData.append("CategoryId", selectedCategoryId);
+      formData.append("SellerId", Number(userId));
 
-    // Convert attributes object to list
-    const attributeList = Object.entries(attributeValues).map(([key, value]) => ({
-      attributeId: Number(key),
-      value: value,
-    }));
+      const selectedAddress = addresses.find(
+        (addr) => addr.addressId === selectedAddressId
+      );
+      formData.append("Location", selectedAddress?.addressLine ?? "");
 
-    formData.append("ProductAttributes", JSON.stringify(attributeList));
+      const attributeList = Object.entries(attributeValues).map(
+        ([key, value]) => ({
+          attributeId: Number(key),
+          value,
+        })
+      );
+      formData.append("ProductAttributes", JSON.stringify(attributeList));
 
-    // Append image files
-    for (let i = 0; i < images.length; i++) {
-      const uri = images[i];
-      const filename = uri.split("/").pop();
-      const match = /\.(\w+)$/.exec(filename ?? "");
-      const type = match ? `image/${match[1]}` : `image`;
+      for (let i = 0; i < images.length; i++) {
+        const uri = images[i];
+        const filename = uri.split("/").pop();
+        const match = /\.(\w+)$/.exec(filename ?? "");
+        const type = match ? `image/${match[1]}` : `image`;
 
-      formData.append("Images", {
-        uri,
-        name: filename,
-        type,
-      });
+        formData.append("Images", {
+          uri,
+          name: filename,
+          type,
+        });
+      }
+
+      await CreatePost(formData);
+      Alert.alert("Thành công", "Sản phẩm đã được đăng!");
+      navigation.goBack();
+    } catch (err) {
+      console.error(err);
+      Alert.alert("Lỗi", "Không thể đăng sản phẩm. Vui lòng thử lại.");
     }
-    const res = await CreateProductPost(formData);
-    Alert.alert("Thành công", "Sản phẩm đã được đăng!");
-    navigation.goBack();
-  } catch (err) {
-    console.error(err);
-    Alert.alert("Lỗi", "Không thể đăng sản phẩm. Vui lòng thử lại.");
-  }
-};
+  };
 
   return (
     <ScrollView style={styles.container}>
       <Text style={styles.header}>Đăng sản phẩm</Text>
 
-      {/* Upload Images */}
       <View style={styles.imageRow}>
         {images.map((uri, idx) => (
           <Image key={idx} source={{ uri }} style={styles.imagePreview} />
@@ -170,10 +202,7 @@ const CreatePostScreen = ({ navigation }) => {
       <DropDownPicker
         open={openCategory}
         value={selectedCategoryId}
-        items={categories.map(c => ({
-          label: c.name,
-          value: c.categoryId,
-        }))}
+        items={categories.map((c) => ({ label: c.name, value: c.categoryId }))}
         setOpen={setOpenCategory}
         setValue={setSelectedCategoryId}
         setItems={() => {}}
@@ -183,7 +212,7 @@ const CreatePostScreen = ({ navigation }) => {
         zIndex={2000}
       />
 
-      {attributes.map(attr => {
+      {attributes.map((attr) => {
         const value = attributeValues[attr.attributeId] || "";
 
         if (attr.type === "select") {
@@ -194,17 +223,17 @@ const CreatePostScreen = ({ navigation }) => {
               <DropDownPicker
                 open={!!openSelects[attr.attributeId]}
                 value={value}
-                items={options.map(opt => ({ label: opt, value: opt }))}
-                setOpen={open =>
-                  setOpenSelects(prev => ({
+                items={options.map((opt) => ({ label: opt, value: opt }))}
+                setOpen={(open) =>
+                  setOpenSelects((prev) => ({
                     ...Object.fromEntries(
-                      Object.keys(prev).map(k => [k, false])
+                      Object.keys(prev).map((k) => [k, false])
                     ),
                     [attr.attributeId]: open,
                   }))
                 }
-                setValue={val =>
-                  setAttributeValues(prev => ({
+                setValue={(val) =>
+                  setAttributeValues((prev) => ({
                     ...prev,
                     [attr.attributeId]: val(),
                   }))
@@ -226,8 +255,8 @@ const CreatePostScreen = ({ navigation }) => {
                 value={value}
                 keyboardType={attr.type === "number" ? "numeric" : "default"}
                 placeholder={attr.description}
-                onChangeText={text =>
-                  setAttributeValues(prev => ({
+                onChangeText={(text) =>
+                  setAttributeValues((prev) => ({
                     ...prev,
                     [attr.attributeId]: text,
                   }))
@@ -239,15 +268,20 @@ const CreatePostScreen = ({ navigation }) => {
       })}
 
       <Text style={styles.label}>Giá</Text>
-      <TextInput style={styles.input} value={price} onChangeText={setPrice} keyboardType="numeric" />
+      <TextInput
+        style={styles.input}
+        value={price}
+        onChangeText={setPrice}
+        keyboardType="numeric"
+      />
 
       <Text style={styles.label}>Giá sale</Text>
-      <TextInput style={styles.input} value={salePrice} onChangeText={setSalePrice} keyboardType="numeric" />
-
-      <View style={styles.rowAlign}>
-        <Switch value={isNegotiable} onValueChange={setIsNegotiable} />
-        <Text style={{ marginLeft: 10 }}>Giá có thể thương lượng</Text>
-      </View>
+      <TextInput
+        style={styles.input}
+        value={salePrice}
+        onChangeText={setSalePrice}
+        keyboardType="numeric"
+      />
 
       <Text style={styles.label}>Thương hiệu</Text>
       <DropDownPicker
@@ -264,18 +298,54 @@ const CreatePostScreen = ({ navigation }) => {
       />
 
       <Text style={styles.label}>Tình trạng</Text>
-      <TextInput style={styles.input} value={condition} onChangeText={setCondition} />
+      <DropDownPicker
+        open={openCondition}
+        value={condition}
+        items={CONDITIONS}
+        setOpen={setOpenCondition}
+        setValue={setCondition}
+        setItems={() => {}}
+        style={styles.input}
+        placeholder="Chọn tình trạng"
+        listMode="MODAL"
+        zIndex={800}
+      />
 
       <Text style={styles.label}>Mô tả chi tiết</Text>
-      <TextInput style={[styles.input, { height: 100 }]} multiline value={description} onChangeText={setDescription} />
+      <TextInput
+        style={[styles.input, { height: 100 }]}
+        multiline
+        value={description}
+        onChangeText={setDescription}
+      />
 
-      <View style={styles.rowAlign}>
-        <Switch value={useDefaultAddress} onValueChange={setUseDefaultAddress} />
-        <Text style={{ marginLeft: 10 }}>Sử dụng địa chỉ mặc định</Text>
-      </View>
-
+      <Text style={styles.label}>Chọn địa chỉ giao hàng</Text>
+      {addresses.length === 0 ? (
+        <Text style={{ color: "#888", marginBottom: 10 }}>
+          Bạn chưa có địa chỉ nào. Hãy thêm địa chỉ trong hồ sơ cá nhân.
+        </Text>
+      ) : (
+        addresses.map((addr) => (
+          <TouchableOpacity
+            key={addr.addressId}
+            style={[
+              styles.addressItem,
+              selectedAddressId === addr.addressId && styles.selectedAddress,
+            ]}
+            onPress={() => setSelectedAddressId(addr.addressId)}
+          >
+            <Text style={styles.addressText}>{addr.addressLine}</Text>
+            {selectedAddressId === addr.addressId && (
+              <Text style={styles.defaultLabel}>Đã chọn</Text>
+            )}
+          </TouchableOpacity>
+        ))
+      )}
       <View style={styles.row}>
-        <TouchableOpacity style={styles.cancelBtn} onPress={() => navigation.goBack()}>
+        <TouchableOpacity
+          style={styles.cancelBtn}
+          onPress={() => navigation.goBack()}
+        >
           <Text style={styles.cancelText}>Hủy</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit}>
@@ -291,16 +361,69 @@ const styles = StyleSheet.create({
   header: { fontSize: 20, fontWeight: "bold", marginBottom: 20 },
   imageRow: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   imagePreview: { width: 70, height: 70, borderRadius: 8, marginRight: 10 },
-  imageAdd: { width: 70, height: 70, borderRadius: 8, borderWidth: 1, borderColor: "#ccc", justifyContent: "center", alignItems: "center" },
+  imageAdd: {
+    width: 70,
+    height: 70,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#ccc",
+    justifyContent: "center",
+    alignItems: "center",
+  },
   label: { fontWeight: "600", marginTop: 10, marginBottom: 4 },
-  input: { borderWidth: 1, borderColor: "#ddd", borderRadius: 8, padding: 10, marginBottom: 10 },
+  input: {
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 10,
+  },
   field: { marginBottom: 10 },
   rowAlign: { flexDirection: "row", alignItems: "center", marginVertical: 10 },
   row: { flexDirection: "row", justifyContent: "space-between", marginTop: 20 },
-  cancelBtn: { flex: 1, backgroundColor: "#ccc", padding: 12, borderRadius: 8, marginRight: 10, alignItems: "center" },
+  cancelBtn: {
+    flex: 1,
+    backgroundColor: "#ccc",
+    padding: 12,
+    borderRadius: 8,
+    marginRight: 10,
+    alignItems: "center",
+  },
   cancelText: { fontWeight: "bold" },
-  submitBtn: { flex: 1, backgroundColor: "#2C3E50", padding: 12, borderRadius: 8, alignItems: "center" },
+  submitBtn: {
+    flex: 1,
+    backgroundColor: "#2C3E50",
+    padding: 12,
+    borderRadius: 8,
+    alignItems: "center",
+  },
   submitText: { color: "#fff", fontWeight: "bold" },
+  addressItem: {
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    padding: 15,
+    marginBottom: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#eee",
+  },
+  selectedAddress: {
+    borderColor: "#4472C4",
+    borderWidth: 2,
+    backgroundColor: "#e6f0ff",
+  },
+  addressText: {
+    fontSize: 15,
+    color: "#333",
+    flex: 1,
+  },
+  defaultLabel: {
+    fontSize: 13,
+    color: "#4472C4",
+    fontWeight: "bold",
+    marginLeft: 10,
+  },
 });
 
 export default CreatePostScreen;

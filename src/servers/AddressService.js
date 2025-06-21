@@ -1,5 +1,16 @@
 import { api, handleApiError } from "./connection";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+
+// Hàm lấy danh sách địa chỉ của người dùng
+export const getUserAddresses = async (userId) => {
+  try {
+    const response = await api.get(`/UserAddresses/user/${userId}`);
+    console.log("Danh sách địa chỉ:", response.data);
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "Không thể lấy danh sách địa chỉ.");
+    return [];
+  }
+};
 
 // Hàm thêm thông tin địa chỉ mới
 export const addUserAddress = async (addressData) => {
