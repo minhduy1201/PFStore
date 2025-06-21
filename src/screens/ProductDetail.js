@@ -293,16 +293,30 @@ export default function ProductDetail({ route, navigation }) {
   const handleAddCart = async () => {
     const quantity = 1;
     try {
-      await addCart(productId, quantity);
-      Alert.alert("Thành công", "Đi đến giỏ hàng", [
-        { text: "Hủy", style: "cancel" },
-        {
-          text: "OK",
-          onPress: () => {
-            navigation.navigate("CartScreen");
+      const data = await addCart(productId, quantity);
+      success = data.success;
+      if (success) {
+        Alert.alert("Thành công", "Đi đến giỏ hàng", [
+          { text: "Hủy", style: "cancel" },
+          {
+            text: "OK",
+            onPress: () => {
+              navigation.navigate("CartScreen");
+            },
           },
-        },
-      ]);
+        ]);
+      }
+      if (!success) {
+        Alert.alert("Giỏ hàng", "Sản phẩm đã có sẵn trong giỏ hàng", [
+          { text: "Hủy", style: "cancel" },
+          {
+            text: "Đến giỏ hàng",
+            onPress: () => {
+              navigation.navigate("CartScreen");
+            },
+          },
+        ]);
+      }
     } catch (error) {
       console.log("Lỗi khi thêm vào giỏ hàng");
     }

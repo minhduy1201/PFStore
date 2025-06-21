@@ -13,11 +13,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import {
-  deleteCart,
-  getCartByUserID,
-  updateQuantityCart,
-} from "../servers/CartService";
+import { deleteCart, getCartByUserID } from "../servers/CartService";
 
 // Helper function to format a raw CartItemDto from backend into frontend CartItem state
 const formatBackendCartItemToFrontend = (backendItem) => {
@@ -38,6 +34,7 @@ const formatBackendCartItemToFrontend = (backendItem) => {
     image: imageUrl,
     color: "N/A",
     size: "N/A",
+    isSelected: false, //mặc định là sản phẩm chưa được chọn
   };
 };
 
@@ -92,67 +89,25 @@ const CartScreen = ({ navigation }) => {
     return unsubscribe;
   }, [fetchCartItems, navigation]);
 
-  // Tính tổng tiền
+  // Xử lý khi nhấn vào checkbox của sản phẩm
+  const toggleItemSelection = (cartId) => {
+    setCartItems((prevItems) =>
+      prevItems.map((item) =>
+        item.id === cartId ? { ...item, isSelected: !item.isSelected } : item
+      )
+    );
+  };
+
+  // Tính tổng tiền chỉ cho các sản phẩm đã được chọn
   const totalAmount = cartItems.reduce(
-    (total, item) => total + (item.price * item.quantity || 0), // Đảm bảo item.price * item.quantity là số
+    (total, item) => total + (item.isSelected ? item.price * item.quantity : 0),
     0
   );
 
-  // Xử lý tăng số lượng
-  const increaseQuantity = async (cartId, currentQuantity) => {
-    try {
-      const updatedCartItemDto = await updateQuantityCart(
-        cartId,
-        currentQuantity + 1
-      );
-      const formattedUpdatedItem =
-        formatBackendCartItemToFrontend(updatedCartItemDto);
-
-      setCartItems(
-        cartItems.map((item) =>
-          item.id === cartId ? formattedUpdatedItem : item
-        )
-      );
-    } catch (error) {
-      console.error("Lỗi khi tăng số lượng:", error);
-      Alert.alert(
-        "Lỗi",
-        error.message ||
-          "Không thể cập nhật số lượng sản phẩm. Vui lòng thử lại."
-      );
-    }
-  };
-
-  // Xử lý giảm số lượng
-  const decreaseQuantity = async (cartId, currentQuantity) => {
-    if (currentQuantity <= 1) {
-      Alert.alert(
-        "Thông báo",
-        "Số lượng tối thiểu là 1. Để xóa sản phẩm, hãy sử dụng nút xóa."
-      );
-      return;
-    }
-    try {
-      const updatedCartItemDto = await updateQuantityCart(
-        cartId,
-        currentQuantity - 1
-      );
-      const formattedUpdatedItem =
-        formatBackendCartItemToFrontend(updatedCartItemDto);
-
-      setCartItems(
-        cartItems.map((item) =>
-          item.id === cartId ? formattedUpdatedItem : item
-        )
-      );
-    } catch (error) {
-      console.error("Lỗi khi giảm số lượng:", error);
-      Alert.alert(
-        "Lỗi",
-        error.message ||
-          "Không thể cập nhật số lượng sản phẩm. Vui lòng thử lại."
-      );
-    }
+  //Xử lý phần bấm vào Thanh toán
+  const handleCheckout = () => {
+    const selectedProducts = cartItems.filter((item) => item.isSelected);
+    navigation.navigate("Checkout", { selectedProducts: selectedProducts });
   };
 
   // Xử lý xóa sản phẩm
@@ -256,54 +211,53 @@ const CartScreen = ({ navigation }) => {
           ) : (
             cartItems.map((item, index) => (
               <View key={index} style={styles.cartItem}>
-                <View style={styles.itemImageContainer}>
-                  <Image
-                    source={{ uri: item.image }}
-                    style={styles.itemImage}
-                  />
-                  <TouchableOpacity
-                    style={styles.removeButtonOverlay}
-                    onPress={() => removeItem(item.id)}
-                  >
-                    <Ionicons name="trash" size={20} color="white" />
-                  </TouchableOpacity>
-                </View>
+                <TouchableOpacity
+                  style={styles.itemContent} // Thêm style này để căn chỉnh nội dung sản phẩm
+                  onPress={() =>
+                    navigation.navigate("ProductDetail", {
+                      productId: item.productId,
+                    })
+                  }
+                >
+                  <View style={styles.itemImageContainer}>
+                    <Image
+                      source={{ uri: item.image }}
+                      style={styles.itemImage}
+                    />
+                    <TouchableOpacity
+                      style={styles.removeButtonOverlay}
+                      onPress={() => removeItem(item.id)}
+                    >
+                      <Ionicons name="trash" size={20} color="white" />
+                    </TouchableOpacity>
+                  </View>
 
-                <View style={styles.itemInfo}>
-                  <Text style={styles.itemName}>{item.name}</Text>
-                  <Text
-                    style={styles.itemColorSize}
-                  >{`${item.color}, Size ${item.size}`}</Text>
+                  <View style={styles.itemInfo}>
+                    <Text style={styles.itemName}>{item.name}</Text>
+                    <Text
+                      style={styles.itemColorSize}
+                    >{`${item.color}, Size ${item.size}`}</Text>
 
-                  <View style={styles.quantityPriceContainer}>
-                    <Text style={styles.itemPrice}>
-                      {formatCurrency(item.price)}
-                    </Text>
-                    <View style={styles.quantityContainer}>
-                      <TouchableOpacity
-                        style={styles.quantityButton}
-                        onPress={() => decreaseQuantity(item.id, item.quantity)}
-                      >
-                        <Ionicons
-                          name="remove-circle-outline"
-                          size={24}
-                          color="#777"
-                        />
-                      </TouchableOpacity>
-                      <Text style={styles.quantity}>{item.quantity}</Text>
-                      <TouchableOpacity
-                        style={styles.quantityButton}
-                        onPress={() => increaseQuantity(item.id, item.quantity)}
-                      >
-                        <Ionicons
-                          name="add-circle-outline"
-                          size={24}
-                          color="#777"
-                        />
-                      </TouchableOpacity>
+                    <View style={styles.quantityPriceContainer}>
+                      <Text style={styles.itemPrice}>
+                        {formatCurrency(item.price * item.quantity)}
+                      </Text>
                     </View>
                   </View>
-                </View>
+                  {/* Checkbox bên trái */}
+                  <TouchableOpacity
+                    style={styles.checkboxContainer}
+                    onPress={() => toggleItemSelection(item.id)}
+                  >
+                    <Ionicons
+                      name={
+                        item.isSelected ? "checkbox-outline" : "square-outline"
+                      }
+                      size={24}
+                      color="#323660"
+                    />
+                  </TouchableOpacity>
+                </TouchableOpacity>
               </View>
             ))
           )}
@@ -320,7 +274,7 @@ const CartScreen = ({ navigation }) => {
             </View>
             <TouchableOpacity
               style={styles.checkoutButton}
-              onPress={() => navigation.navigate("Checkout")}
+              onPress={handleCheckout}
             >
               <Text style={styles.checkoutButtonText}>Thanh toán</Text>
             </TouchableOpacity>
@@ -328,7 +282,7 @@ const CartScreen = ({ navigation }) => {
         </View>
       </View>
 
-      {/* Phần chỉnh sửa thông tin */}
+      {/* Phần chỉnh sửa thông tin */}
       <Modal
         animationType="slide"
         transparent={true}
@@ -406,7 +360,8 @@ const styles = StyleSheet.create({
   mainContentArea: { flex: 1 },
   content: { flexGrow: 1, padding: 16, paddingBottom: 150 },
   cartItem: {
-    flexDirection: "row",
+    flexDirection: "row", // Đảm bảo flex row để checkbox và nội dung cạnh nhau
+    alignItems: "center", // Căn giữa theo chiều dọc
     marginBottom: 16,
     padding: 12,
     backgroundColor: "#f8f8f8",
@@ -416,6 +371,15 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
+  },
+  checkboxContainer: {
+    marginRight: 10, // Khoảng cách giữa checkbox và ảnh sản phẩm
+    padding: 5, // Tăng diện tích chạm cho checkbox
+    justifyContent: "center",
+  },
+  itemContent: {
+    flexDirection: "row",
+    flex: 1, // Để nội dung sản phẩm chiếm hết phần còn lại
   },
   itemImageContainer: { position: "relative" },
   itemImage: { width: 100, height: 100, borderRadius: 8 },

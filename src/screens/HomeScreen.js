@@ -1,8 +1,24 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, TextInput, TouchableOpacity, Alert, Modal, TouchableWithoutFeedback, Keyboard } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { GetCategories, getProducts, GetProducts } from '../servers/ProductService';
+import React, { useEffect, useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Image,
+  TextInput,
+  TouchableOpacity,
+  Alert,
+  Modal,
+  TouchableWithoutFeedback,
+  Keyboard,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import {
+  GetCategories,
+  getProducts,
+  GetProducts,
+} from "../servers/ProductService";
 
 export default function HomeScreen({ navigation }) {
   const [categories, setCategories] = useState([]);
@@ -63,22 +79,20 @@ export default function HomeScreen({ navigation }) {
     navigation.navigate("SearchProducts", { keyword }); // Chuyển sang màn hình SearchProducts với từ khóa
   };
 
-
-
   return (
     <ScrollView style={styles.container}>
       {/* Thanh tìm kiếm */}
       <View style={styles.header}>
         <Image
-          source={require('../../assets/images/logo.jpg')}
+          source={require("../../assets/images/logo.jpg")}
           style={styles.logo}
           resizeMode="contain"
         />
-        <TextInput 
-        style={styles.searchInput} 
-        placeholder="Tìm kiếm sản phẩm"
-        value={keyword}
-        onChangeText={(text) => setKeyword(text)}
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Tìm kiếm sản phẩm"
+          value={keyword}
+          onChangeText={(text) => setKeyword(text)}
         />
         <TouchableOpacity onPress={handleSearch} style={styles.searchButton}>
           <Ionicons name="search" size={24} color="black" />
