@@ -33,13 +33,24 @@ export const addCart = async (prodId, quantity) => {
   };
   try {
     const res = await api.post("/Carts", requestBody);
-    if (res.status == 200 && res.data && res.data.cartItem) {
-      return res.data.cartItem;
+    if (res.status === 200) {
+      //nếu chưa được thêm
+      if (res.data && res.data.cartItem) {
+        console.log("Sản phẩm đã được thêm vào giỏ hàng:", res.data.cartItem);
+        return {
+          success: true,
+          cartItem: res.data.cartItem,
+          message: res.data.message,
+        };
+      } else if (res.data && res.data.message) {
+        console.log("Thông báo từ giỏ hàng:", res.data.message);
+        // trường hợp sản phẩm đã có sẵn
+        return { success: false, message: res.data.message };
+      }
     }
   } catch (error) {
     console.error("Lỗi khi thêm sản phẩm vào giỏ hàng:", error);
     let errorMessage = "Đã xảy ra lỗi không xác định.";
-
     if (error.response) {
       // Lỗi từ phía server (HTTP status code không phải 2xx)
       // Lấy thông báo lỗi được gửi từ backend

@@ -1,7 +1,20 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert, Modal, TouchableWithoutFeedback, Keyboard, Image, TextInput, FlatList } from "react-native";
-import { Ionicons } from '@expo/vector-icons';
-import { GetCategories, getProducts } from '../servers/ProductService';
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  Modal,
+  TouchableWithoutFeedback,
+  Keyboard,
+  Image,
+  TextInput,
+  FlatList,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { GetCategories, getProducts } from "../servers/ProductService";
 import ProductCard from "../components/ProductCard";
 import { BRANDS } from '../screens/CreatePostScreen';
 
@@ -15,9 +28,8 @@ export default function SearchProductsScreen({ route, navigation }) {
   const [selectedBrands, setSelectedBrands] = useState([]);
   const [selectedSizes, setSelectedSizes] = useState([]);
   const [selectedCategories, setSelectedCategories] = useState([]);
-  const [minPrice, setMinPrice] = useState('');
-  const [maxPrice, setMaxPrice] = useState('');
-
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
 
   useEffect(() => {
     // Tìm kiếm sản phẩm khi màn hình được render
@@ -38,7 +50,7 @@ export default function SearchProductsScreen({ route, navigation }) {
 
   useEffect(() => {
     if (keyword) {
-      const filtered = products.filter(product =>
+      const filtered = products.filter((product) =>
         product.title.toLowerCase().includes(keyword.toLowerCase())
       );
       setFilteredProducts(filtered);
@@ -75,18 +87,17 @@ export default function SearchProductsScreen({ route, navigation }) {
     setShowFilter(!showFilter);
   };
 
-
   // Xử lý nút thiết lập lại
   const resetFilters = () => {
     setSelectedBrands([]);
     setSelectedCategories([]);
-    setMinPrice('');
-    setMaxPrice('');
+    setMinPrice("");
+    setMaxPrice("");
   };
-
 
   // Xử lý áp dụng lọc
   const applyFilter = () => {
+
     let filtered = products.filter(product =>
       product.title.toLowerCase().includes(keyword.toLowerCase()) // Giữ lại từ khóa tìm kiếm
     );
@@ -94,6 +105,7 @@ export default function SearchProductsScreen({ route, navigation }) {
     // Lọc theo thương hiệu
     if (selectedBrands.length > 0) {
       filtered = filtered.filter(product => selectedBrands.includes(product.brand));
+
     }
 
     // Lọc theo danh mục
@@ -116,7 +128,7 @@ export default function SearchProductsScreen({ route, navigation }) {
   // Hàm để toggle chọn thương hiệu
   const toggleBrandSelection = (brand) => {
     if (selectedBrands.includes(brand)) {
-      setSelectedBrands(selectedBrands.filter(b => b !== brand)); // Bỏ chọn nếu đã chọn
+      setSelectedBrands(selectedBrands.filter((b) => b !== brand)); // Bỏ chọn nếu đã chọn
     } else {
       setSelectedBrands([...selectedBrands, brand]); // Thêm vào danh sách đã chọn
     }
@@ -125,7 +137,7 @@ export default function SearchProductsScreen({ route, navigation }) {
   // Xử lý toggle chọn danh mục
   const toggleCategorySelection = (category) => {
     if (selectedCategories.includes(category)) {
-      setSelectedCategories(selectedCategories.filter(c => c !== category)); // Bỏ chọn nếu đã chọn
+      setSelectedCategories(selectedCategories.filter((c) => c !== category)); // Bỏ chọn nếu đã chọn
     } else {
       setSelectedCategories([...selectedCategories, category]); // Thêm vào danh sách đã chọn
     }
@@ -140,7 +152,6 @@ export default function SearchProductsScreen({ route, navigation }) {
         </TouchableOpacity>
       </View>
 
-
       {/* Hiển thị sản phẩm tìm thấy */}
       {filteredProducts.length > 0 ? (
         <View style={styles.productsGridContainer}>
@@ -148,7 +159,11 @@ export default function SearchProductsScreen({ route, navigation }) {
             <TouchableOpacity
               key={index}
               style={styles.productCard}
-              onPress={() => navigation.navigate("ProductDetail", { productId: prod.productId })}
+              onPress={() =>
+                navigation.navigate("ProductDetail", {
+                  productId: prod.productId,
+                })
+              }
               activeOpacity={0.85}
             >
               {prod.productImages && prod.productImages.length > 0 ? (
@@ -181,7 +196,8 @@ export default function SearchProductsScreen({ route, navigation }) {
           transparent={true}
           animationType="slide"
           visible={showFilter}
-          onRequestClose={toggleFilter}>
+          onRequestClose={toggleFilter}
+        >
           <TouchableWithoutFeedback onPress={() => setShowFilter(false)}>
             <View style={styles.overlay}></View>
           </TouchableWithoutFeedback>
@@ -202,6 +218,7 @@ export default function SearchProductsScreen({ route, navigation }) {
                       key={bra.value}
                       style={[
                         styles.categoryItem,
+
                         selectedBrands.includes(bra.value) && styles.selectedCategory,
                       ]}
                       onPress={() => toggleBrandSelection(bra.value)}
@@ -223,8 +240,13 @@ export default function SearchProductsScreen({ route, navigation }) {
                   {categories.map((category, index) => (
                     <TouchableOpacity
                       key={index}
-                      style={[styles.categoryItem, selectedCategories.includes(category.name) && styles.selectedCategory]}
-                      onPress={() => toggleCategorySelection(category.name)}>
+                      style={[
+                        styles.categoryItem,
+                        selectedCategories.includes(category.name) &&
+                          styles.selectedCategory,
+                      ]}
+                      onPress={() => toggleCategorySelection(category.name)}
+                    >
                       <Text style={styles.categoryText}>{category.name}</Text>
                     </TouchableOpacity>
                   ))}
@@ -252,10 +274,16 @@ export default function SearchProductsScreen({ route, navigation }) {
 
               {/* Nút thiết lập lại và áp dụng */}
               <View style={styles.buttonContainer}>
-                <TouchableOpacity onPress={resetFilters} style={styles.buttonReset}>
+                <TouchableOpacity
+                  onPress={resetFilters}
+                  style={styles.buttonReset}
+                >
                   <Text style={styles.buttonText}>Thiết lập lại</Text>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={applyFilter} style={styles.buttonApply}>
+                <TouchableOpacity
+                  onPress={applyFilter}
+                  style={styles.buttonApply}
+                >
                   <Text style={styles.buttonText}>Áp dụng</Text>
                 </TouchableOpacity>
               </View>
@@ -263,8 +291,6 @@ export default function SearchProductsScreen({ route, navigation }) {
           </View>
         </Modal>
       )}
-
-
     </ScrollView>
   );
 }
@@ -366,7 +392,6 @@ const styles = StyleSheet.create({
     height: 32,
   },
 
-
   // Thêm style cho phần mới
 
   searchInput: {
@@ -385,14 +410,14 @@ const styles = StyleSheet.create({
 
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    backgroundColor: "rgba(0, 0, 0, 0.3)",
   },
   filterContainer: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     padding: 20,
     borderTopLeftRadius: 10,
     borderTopRightRadius: 10,
@@ -402,7 +427,7 @@ const styles = StyleSheet.create({
   },
   filterTitle: {
     fontSize: 20,
-    fontWeight: '600',
+    fontWeight: "600",
     marginBottom: 20,
   },
   filterLabel: {
@@ -411,41 +436,41 @@ const styles = StyleSheet.create({
   },
   filterInput: {
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: "#ccc",
     borderRadius: 5,
     padding: 10,
     marginBottom: 10,
   },
   selectedCategory: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: "#4CAF50",
   },
   selectedCategory: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: "#4CAF50",
   },
   priceContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginTop: 20,
   },
   buttonReset: {
-    backgroundColor: '#ccc',
+    backgroundColor: "#ccc",
     padding: 10,
     borderRadius: 5,
-    width: '48%',
+    width: "48%",
   },
   buttonApply: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: "#4CAF50",
     padding: 10,
     borderRadius: 5,
-    width: '48%',
+    width: "48%",
   },
   buttonText: {
-    color: '#fff',
-    textAlign: 'center',
+    color: "#fff",
+    textAlign: "center",
   },
   listContentContainer: {
     paddingHorizontal: 5,

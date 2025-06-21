@@ -293,16 +293,30 @@ export default function ProductDetail({ route, navigation }) {
   const handleAddCart = async () => {
     const quantity = 1;
     try {
-      await addCart(productId, quantity);
-      Alert.alert("Thành công", "Đi đến giỏ hàng", [
-        { text: "Hủy", style: "cancel" },
-        {
-          text: "OK",
-          onPress: () => {
-            navigation.navigate("CartScreen");
+      const data = await addCart(productId, quantity);
+      success = data.success;
+      if (success) {
+        Alert.alert("Thành công", "Đi đến giỏ hàng", [
+          { text: "Hủy", style: "cancel" },
+          {
+            text: "OK",
+            onPress: () => {
+              navigation.navigate("CartScreen");
+            },
           },
-        },
-      ]);
+        ]);
+      }
+      if (!success) {
+        Alert.alert("Giỏ hàng", "Sản phẩm đã có sẵn trong giỏ hàng", [
+          { text: "Hủy", style: "cancel" },
+          {
+            text: "Đến giỏ hàng",
+            onPress: () => {
+              navigation.navigate("CartScreen");
+            },
+          },
+        ]);
+      }
     } catch (error) {
       console.log("Lỗi khi thêm vào giỏ hàng");
     }
@@ -446,7 +460,7 @@ export default function ProductDetail({ route, navigation }) {
           {product.seller && (
             <TouchableOpacity style={styles.sellerContainer}>
               <Image
-                source={require("../../assets/images/logo.jpg")}
+                source={{ uri: product.seller.avatarUrl }}
                 style={styles.sellerAvatar}
               />
               <View style={styles.sellerInfo}>
@@ -462,20 +476,6 @@ export default function ProductDetail({ route, navigation }) {
                       style={styles.verifiedIcon}
                     />
                   )}
-                </View>
-                <View style={styles.sellerRating}>
-                  <Text style={styles.ratingText}>4.0</Text>
-                  {[...Array(5)].map((_, i) => (
-                    <Ionicons
-                      key={i}
-                      name={i < 4 ? "star" : "star-outline"}
-                      size={16}
-                      color="#FFD700"
-                    />
-                  ))}
-                  <Text style={styles.ratingText}>
-                    ({product.seller.productCount || 10} sản phẩm đã bán)
-                  </Text>
                 </View>
               </View>
               <Ionicons name="chevron-forward" size={24} color="#ccc" />

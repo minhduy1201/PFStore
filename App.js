@@ -138,6 +138,7 @@ export default function App() {
         <Stack.Screen name="AppInfo" component={AppInfoScreen} />
         <Stack.Screen name="ProductByCat" component={ProductByCategory} />
         <Stack.Screen name="CartScreen" component={CartScreen} />
+        <Stack.Screen name="Checkout" component={CheckoutScreen} />
         <Stack.Screen
           name="CreatePost"
           component={CreatePostScreen}
