@@ -37,7 +37,6 @@ const CONDITIONS = [
   { label: "Hư hỏng", value: "broken" },
 ];
 
-
 const CreatePostScreen = ({ navigation }) => {
   const [images, setImages] = useState([]);
   const [title, setTitle] = useState("");
@@ -47,7 +46,7 @@ const CreatePostScreen = ({ navigation }) => {
   const [brand, setBrand] = useState("");
   const [condition, setCondition] = useState("");
   const [description, setDescription] = useState("");
-const [openCondition, setOpenCondition] = useState(false);
+  const [openCondition, setOpenCondition] = useState(false);
   const [categories, setCategories] = useState([]);
   const [openCategory, setOpenCategory] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
@@ -124,14 +123,13 @@ const [openCondition, setOpenCondition] = useState(false);
   };
 
   const handleSubmit = async () => {
-    // if (!title || !price || !selectedCategoryId) {
-    //   Alert.alert(
-    //     "Thiếu thông tin",
-    //     "Vui lòng điền đầy đủ các trường bắt buộc."
-    //   );
-    //   return;
-    // }
-
+    if (!title || !price || !selectedCategoryId) {
+      Alert.alert(
+        "Thiếu thông tin",
+        "Vui lòng điền đầy đủ các trường bắt buộc."
+      );
+      return;
+    }
     try {
       const userId = await AsyncStorage.getItem("userId");
 
@@ -182,17 +180,31 @@ const [openCondition, setOpenCondition] = useState(false);
 
   return (
     <ScrollView style={styles.container}>
-      <Text style={styles.header}>Đăng sản phẩm</Text>
-
+       <Text style={styles.label}>Hình ảnh</Text>
       <View style={styles.imageRow}>
         {images.map((uri, idx) => (
-          <Image key={idx} source={{ uri }} style={styles.imagePreview} />
+          <View key={idx} style={styles.imagePreviewWrapper}>
+            <Image source={{ uri }} style={styles.imagePreview} />
+            <TouchableOpacity
+              style={styles.deleteImageBtn}
+              onPress={() => setImages(images.filter((_, i) => i !== idx))}
+            >
+              <Entypo name="cross" size={18} color="#fff" />
+            </TouchableOpacity>
+          </View>
         ))}
         {images.length < 5 && (
           <TouchableOpacity style={styles.imageAdd} onPress={pickImage}>
-            <Entypo name="plus" size={24} color="#666" />
+            <Entypo name="plus" size={28} color="#323660" />
+            {/* <Text style={styles.imageAddText}>Thêm ảnh</Text> */}
           </TouchableOpacity>
         )}
+        <View>
+        <Text style={{ color: "#888", fontSize: 13, marginBottom: 4 }}>
+          Tải lên hình ảnh có kích thước lớn hơn 750px x 450px. Số lượng tối đa 5
+          ảnh. Dung lượng mỗi ảnh tối đa 134MB.
+        </Text>
+      </View>
       </View>
 
       <Text style={styles.label}>Tiêu đề</Text>
@@ -357,71 +369,146 @@ const [openCondition, setOpenCondition] = useState(false);
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: "#fff" },
-  header: { fontSize: 20, fontWeight: "bold", marginBottom: 20 },
-  imageRow: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
-  imagePreview: { width: 70, height: 70, borderRadius: 8, marginRight: 10 },
-  imageAdd: {
-    width: 70,
-    height: 70,
-    borderRadius: 8,
+  container: {
+    flex: 1,
+    padding: 24,
+    backgroundColor: "#F7F9FC",
+    paddingTop: 40,
+    paddingBottom: 40,
+  },
+  header: {
+    fontSize: 20,
+    fontWeight: "700",
+    marginBottom: 24,
+    color: "#1C1C1E",
+  },
+  imageRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginBottom: 12,
+    gap: 10,
+  },
+  imagePreviewWrapper: {
+    position: "relative",
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  imagePreview: {
+    width: 80,
+    height: 80,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#ccc",
+    borderColor: "#e0e0e0",
+  },
+  deleteImageBtn: {
+    position: "absolute",
+    top: -8,
+    right: -8,
+    backgroundColor: "#e63946",
+    borderRadius: 12,
+    padding: 2,
+    zIndex: 2,
+    elevation: 2,
+  },
+  imageAdd: {
+    width: 80,
+    height: 80,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: "#323660",
     justifyContent: "center",
     alignItems: "center",
+    flexDirection: "column",
+    marginRight: 8,
+    marginBottom: 8,
+    backgroundColor: "#E5EBFC",
   },
-  label: { fontWeight: "600", marginTop: 10, marginBottom: 4 },
+  imageAddText: {
+    fontSize: 12,
+    color: "#323660",
+    marginTop: 4,
+    fontWeight: "500",
+  },
+  label: {
+    fontWeight: "700",
+    fontSize: 15,
+    marginTop: 15,
+    marginBottom: 6,
+    color: "#1E2E3D",
+    letterSpacing: 0.2,
+    textTransform: "uppercase",
+    letterSpacing: 1,
+  },
   input: {
     borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
-    padding: 10,
-    marginBottom: 10,
+    borderColor: "#D1D1D6",
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    fontSize: 14,
+    backgroundColor: "#FFFFFF",
   },
-  field: { marginBottom: 10 },
-  rowAlign: { flexDirection: "row", alignItems: "center", marginVertical: 10 },
-  row: { flexDirection: "row", justifyContent: "space-between", marginTop: 20 },
-  cancelBtn: {
-    flex: 1,
-    backgroundColor: "#ccc",
-    padding: 12,
-    borderRadius: 8,
-    marginRight: 10,
-    alignItems: "center",
+  field: {
+    marginBottom: 12,
   },
-  cancelText: { fontWeight: "bold" },
-  submitBtn: {
-    flex: 1,
-    backgroundColor: "#2C3E50",
-    padding: 12,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  submitText: { color: "#fff", fontWeight: "bold" },
-  addressItem: {
-    backgroundColor: "#fff",
-    borderRadius: 8,
-    padding: 15,
-    marginBottom: 10,
+  rowAlign: {
     flexDirection: "row",
     alignItems: "center",
+    marginVertical: 12,
+  },
+  row: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 32,
+  },
+  cancelBtn: {
+    flex: 1,
+    backgroundColor: "#F2F4F7",
+    paddingVertical: 14,
+    borderRadius: 12,
+    marginRight: 12,
+    alignItems: "center",
     borderWidth: 1,
-    borderColor: "#eee",
+    borderColor: "#D1D1D6",
+  },
+  cancelText: {
+    fontWeight: "600",
+    color: "#1C1C1E",
+  },
+  submitBtn: {
+    flex: 1,
+    backgroundColor: "#1E2E3D",
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  submitText: {
+    color: "#FFFFFF",
+    fontWeight: "600",
+  },
+  addressItem: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
+    flexDirection: "row",
+    alignItems: "center",
   },
   selectedAddress: {
-    borderColor: "#4472C4",
-    borderWidth: 2,
-    backgroundColor: "#e6f0ff",
+    borderColor: "#3478F6",
+    backgroundColor: "#EAF1FF",
   },
   addressText: {
-    fontSize: 15,
-    color: "#333",
+    fontSize: 14,
+    color: "#1C1C1E",
     flex: 1,
   },
   defaultLabel: {
     fontSize: 13,
-    color: "#4472C4",
-    fontWeight: "bold",
+    color: "#3478F6",
+    fontWeight: "600",
     marginLeft: 10,
   },
 });
