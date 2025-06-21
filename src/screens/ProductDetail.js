@@ -460,7 +460,7 @@ export default function ProductDetail({ route, navigation }) {
           {product.seller && (
             <TouchableOpacity style={styles.sellerContainer}>
               <Image
-                source={require("../../assets/images/logo.jpg")}
+                source={{ uri: product.seller.avatarUrl }}
                 style={styles.sellerAvatar}
               />
               <View style={styles.sellerInfo}>
@@ -476,20 +476,6 @@ export default function ProductDetail({ route, navigation }) {
                       style={styles.verifiedIcon}
                     />
                   )}
-                </View>
-                <View style={styles.sellerRating}>
-                  <Text style={styles.ratingText}>4.0</Text>
-                  {[...Array(5)].map((_, i) => (
-                    <Ionicons
-                      key={i}
-                      name={i < 4 ? "star" : "star-outline"}
-                      size={16}
-                      color="#FFD700"
-                    />
-                  ))}
-                  <Text style={styles.ratingText}>
-                    ({product.seller.productCount || 10} sản phẩm đã bán)
-                  </Text>
                 </View>
               </View>
               <Ionicons name="chevron-forward" size={24} color="#ccc" />

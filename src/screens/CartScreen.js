@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+
 import {
   View,
   Text,
@@ -12,12 +13,16 @@ import {
   Modal,
   ActivityIndicator,
 } from "react-native";
+
 import { Ionicons } from "@expo/vector-icons";
+
 import { deleteCart, getCartByUserID } from "../servers/CartService";
 
 // Helper function to format a raw CartItemDto from backend into frontend CartItem state
+
 const formatBackendCartItemToFrontend = (backendItem) => {
   // Lấy URL của hình ảnh đầu tiên trong mảng productImages
+
   const imageUrl =
     backendItem.product &&
     backendItem.product.productImages &&
@@ -27,54 +32,78 @@ const formatBackendCartItemToFrontend = (backendItem) => {
 
   return {
     id: backendItem.cartId,
+
     productId: backendItem.product ? backendItem.product.productId : null,
+
     name: backendItem.product ? backendItem.product.title : "Sản phẩm không rõ",
+
     price: backendItem.product ? backendItem.product.price : 0,
+
     quantity: backendItem.quantity,
+
     image: imageUrl,
+
     color: "N/A",
+
     size: "N/A",
-    isSelected: false, //mặc định là sản phẩm chưa được chọn
+
+    isSelected: false, //mặc định là sản phẩm chưa được chọn
   };
 };
 
 const CartScreen = ({ navigation }) => {
   const [cartItems, setCartItems] = useState([]);
+
   const [loading, setLoading] = useState(true);
+
   const [error, setError] = useState(null);
 
   const [isAddressModalVisible, setAddressModalVisible] = useState(false);
-  const [street, setStreet] = useState("26, Đường Số 2, P. Thảo Điền");
-  const [ward, setWard] = useState("An Phú");
-  const [district, setDistrict] = useState("Quận 2");
-  const [city, setCity] = useState("TP.HCM");
 
-  // Hàm để format tiền tệ Việt Nam
+  const [street, setStreet] = useState("26, Đường Số 2, P. Thảo Điền");
+
+  const [ward, setWard] = useState("An Phú");
+
+  const [district, setDistrict] = useState("Quận 2");
+
+  const [city, setCity] = useState("TP.HCM"); // Hàm để format tiền tệ Việt Nam
+
   const formatCurrency = (amount) => {
     // Đảm bảo amount là một số hợp lệ trước khi format
+
     if (typeof amount !== "number" || isNaN(amount)) {
       return "0đ"; // Hoặc một giá trị mặc định khác
     }
+
     return new Intl.NumberFormat("vi-VN", {
       style: "currency",
+
       currency: "VND",
+
       minimumFractionDigits: 0,
+
       maximumFractionDigits: 0,
     }).format(amount);
   };
 
   const fetchCartItems = useCallback(async () => {
     setLoading(true);
+
     setError(null);
+
     try {
       const data = await getCartByUserID(); // data là một mảng các CartItemDto
+
       const formattedCartItems = data.map((item) =>
         formatBackendCartItemToFrontend(item)
       );
+
       setCartItems(formattedCartItems);
     } catch (err) {
       console.error("Lỗi khi tải giỏ hàng:", err);
+
       setError("Không thể tải giỏ hàng. Vui lòng thử lại.");
+
       setCartItems([]);
     } finally {
       setLoading(false);
@@ -83,50 +112,61 @@ const CartScreen = ({ navigation }) => {
 
   useEffect(() => {
     fetchCartItems();
+
     const unsubscribe = navigation.addListener("focus", () => {
       fetchCartItems();
     });
-    return unsubscribe;
-  }, [fetchCartItems, navigation]);
 
-  // Xử lý khi nhấn vào checkbox của sản phẩm
+    return unsubscribe;
+  }, [fetchCartItems, navigation]); // Xử lý khi nhấn vào checkbox của sản phẩm
+
   const toggleItemSelection = (cartId) => {
     setCartItems((prevItems) =>
       prevItems.map((item) =>
         item.id === cartId ? { ...item, isSelected: !item.isSelected } : item
       )
     );
-  };
+  }; // Tính tổng tiền chỉ cho các sản phẩm đã được chọn
 
-  // Tính tổng tiền chỉ cho các sản phẩm đã được chọn
   const totalAmount = cartItems.reduce(
     (total, item) => total + (item.isSelected ? item.price * item.quantity : 0),
-    0
-  );
 
-  //Xử lý phần bấm vào Thanh toán
+    0
+  ); //Xử lý phần bấm vào Thanh toán
+
   const handleCheckout = () => {
     const selectedProducts = cartItems.filter((item) => item.isSelected);
-    navigation.navigate("Checkout", { selectedProducts: selectedProducts });
-  };
 
-  // Xử lý xóa sản phẩm
+    if (selectedProducts.length == 0) {
+      Alert.alert("Thanh toán", "Hãy chọn sản phẩm để thanh toán");
+    } else {
+      navigation.navigate("Checkout", { selectedProducts: selectedProducts });
+    }
+  }; // Xử lý xóa sản phẩm
+
   const removeItem = async (cartId) => {
     Alert.alert(
       "Xác nhận xóa",
+
       "Bạn có chắc chắn muốn xóa sản phẩm này khỏi giỏ hàng?",
+
       [
         { text: "Hủy", style: "cancel" },
+
         {
           text: "Xóa",
+
           onPress: async () => {
             try {
               await deleteCart(cartId);
+
               setCartItems(cartItems.filter((item) => item.id !== cartId));
             } catch (error) {
               console.error("Lỗi khi xóa sản phẩm:", error);
+
               Alert.alert(
                 "Lỗi",
+
                 error.message || "Không thể xóa sản phẩm. Vui lòng thử lại."
               );
             }
@@ -138,10 +178,13 @@ const CartScreen = ({ navigation }) => {
 
   const handleSaveAddress = () => {
     console.log("Saving address:", { street, ward, district, city });
+
     Alert.alert(
       "Thông báo",
+
       "Địa chỉ đã được lưu thành công (chức năng lưu API chưa tích hợp)."
     );
+
     setAddressModalVisible(false);
   };
 
@@ -180,7 +223,6 @@ const CartScreen = ({ navigation }) => {
         </View>
         <View style={{ width: 24 }} />
       </View>
-
       {/* Delivery Address Section */}
       <View style={styles.addressContainer}>
         <Text style={styles.addressTitle}>Địa chỉ giao hàng</Text>
@@ -231,13 +273,11 @@ const CartScreen = ({ navigation }) => {
                       <Ionicons name="trash" size={20} color="white" />
                     </TouchableOpacity>
                   </View>
-
                   <View style={styles.itemInfo}>
                     <Text style={styles.itemName}>{item.name}</Text>
                     <Text
                       style={styles.itemColorSize}
                     >{`${item.color}, Size ${item.size}`}</Text>
-
                     <View style={styles.quantityPriceContainer}>
                       <Text style={styles.itemPrice}>
                         {formatCurrency(item.price * item.quantity)}
@@ -262,7 +302,6 @@ const CartScreen = ({ navigation }) => {
             ))
           )}
         </ScrollView>
-
         {/* Tổng tiền và nút thanh toán (Cố định ở dưới) */}
         <View style={styles.footer}>
           <View style={styles.totalContainer}>
@@ -281,7 +320,6 @@ const CartScreen = ({ navigation }) => {
           </View>
         </View>
       </View>
-
       {/* Phần chỉnh sửa thông tin */}
       <Modal
         animationType="slide"
@@ -396,6 +434,7 @@ const styles = StyleSheet.create({
   itemColorSize: { fontSize: 14, color: "#666", marginBottom: 8 },
   quantityPriceContainer: {
     flexDirection: "row",
+
     justifyContent: "space-between",
     alignItems: "center",
     marginTop: 8,
