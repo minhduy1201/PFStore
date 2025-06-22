@@ -41,6 +41,7 @@ import ProductByCategory from "./src/screens/ProductByCategory";
 import SearchProductsScreen from "./src/screens/SearchProductsScreen";
 import CreatePostScreen from "./src/screens/CreatePostScreen";
 import SellerProfileScreen from "./src/screens/SellerProfileScreen";
+import NotifyScreen from "./src/screens/NotifyScreen";
 
 // import SettingsScreen from './src/screens/Settings/SettingsScreen';
 
@@ -114,6 +115,9 @@ function MainTabs() {
             case "Post":
               iconName = focused ? "reader" : "reader-outline";
               break;
+            case "Notify":
+              iconName = focused ? "notifications" : "notifications-outline";
+              break;
             case "Orders":
               iconName = focused ? "cart" : "cart-outline";
               break;
@@ -149,6 +153,7 @@ function MainTabs() {
       <Tab.Screen name="Home" component={HomeScreen} />
       <Tab.Screen name="Wishlist" component={WishlistScreen} />
       <Tab.Screen name="Post" component={PostsScreen} />
+      <Tab.Screen name="Notify" component={NotifyScreen} />
       <Tab.Screen name="Orders" component={OrdersStackScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
