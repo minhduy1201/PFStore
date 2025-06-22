@@ -463,7 +463,15 @@ export default function ProductDetail({ route, navigation }) {
                 source={{ uri: product.seller.avatarUrl }}
                 style={styles.sellerAvatar}
               />
-              <View style={styles.sellerInfo}>
+              <TouchableOpacity
+                style={styles.sellerInfo}
+                onPress={() =>
+                  navigation.navigate("SellerProfile", {
+                    sellerId: product.seller.userId,
+                    sellerName: product.seller.fullName,
+                  })
+                }
+              >
                 <View style={styles.sellerNameRow}>
                   <Text style={styles.sellerName}>
                     {product.seller.fullName}
@@ -477,7 +485,7 @@ export default function ProductDetail({ route, navigation }) {
                     />
                   )}
                 </View>
-              </View>
+              </TouchableOpacity>
               <Ionicons name="chevron-forward" size={24} color="#ccc" />
             </TouchableOpacity>
           )}
