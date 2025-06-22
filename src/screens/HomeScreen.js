@@ -29,7 +29,7 @@ export default function HomeScreen({ navigation }) {
     const checkLoginStatus = async () => {
       try {
         const token = await AsyncStorage.getItem("token");
-        const user = await AsyncStorage.getItem("user");
+        const user = await AsyncStorage.getItem("current_user");
         if (!token || !user) {
           navigation.replace("Login");
         }
@@ -40,7 +40,7 @@ export default function HomeScreen({ navigation }) {
     };
 
     checkLoginStatus();
-  }, [categories, navigation]);
+  }, [navigation]);
 
   useEffect(() => {
     const loadCategories = async () => {

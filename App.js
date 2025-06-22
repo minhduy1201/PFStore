@@ -1,9 +1,17 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { SafeAreaView, View, Text, StyleSheet, Platform } from "react-native";
+import {
+  SafeAreaView,
+  View,
+  Text,
+  StyleSheet,
+  Platform,
+  ActivityIndicator,
+} from "react-native";
 import Icon from "react-native-vector-icons/Ionicons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // Screens
 import LoginScreen from "./src/screens/Login/LoginScreen";
@@ -35,6 +43,30 @@ import CreatePostScreen from "./src/screens/CreatePostScreen";
 import SellerProfileScreen from "./src/screens/SellerProfileScreen";
 
 // import SettingsScreen from './src/screens/Settings/SettingsScreen';
+
+const AuthLoadingScreen = ({ navigation }) => {
+  useEffect(() => {
+    const checkToken = async () => {
+      try {
+        const token = await AsyncStorage.getItem("token");
+        // Add a delay for splash screen visibility if desired
+        // await new Promise(resolve => setTimeout(resolve, 1000));
+        navigation.replace(token ? "Main" : "Login");
+      } catch (e) {
+        // Error reading token
+        navigation.replace("Login");
+      }
+    };
+
+    checkToken();
+  }, [navigation]);
+
+  return (
+    <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+      <ActivityIndicator size="large" color="#2f80ed" />
+    </View>
+  );
+};
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -127,9 +159,10 @@ export default function App() {
   return (
     <NavigationContainer>
       <Stack.Navigator
-        initialRouteName="Main"
+        initialRouteName="AuthLoading"
         screenOptions={{ headerShown: false }}
       >
+        <Stack.Screen name="AuthLoading" component={AuthLoadingScreen} />
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Signup" component={SignupScreen} />
         <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />

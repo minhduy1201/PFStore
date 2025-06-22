@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useEffect } from "react"; // Import useEffect
+import React, { useCallback, useState, useEffect } from "react";
 import { useFocusEffect } from "@react-navigation/native";
 import {
   View,
@@ -10,25 +10,22 @@ import {
   SafeAreaView,
   Modal,
   TextInput,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { getUserAddresses } from "../servers/AddressService";
 import { getUserId } from "../servers/AuthenticationService";
+import { createOrder } from "../servers/OrderService";
+import { deleteMultipleCartItems } from "../servers/CartService";
 
-// Nhận `route` prop để truy cập params
 const CheckoutScreen = ({ navigation, route }) => {
-  // Lấy danh sách sản phẩm đã chọn từ navigation params
-  // Sử dụng một mảng rỗng làm giá trị mặc định nếu không có params
   const [products, setProducts] = useState([]);
-  //lưu địa chỉ được hiển thị trên ui hiện tại
   const [selectedDisplayAddress, setSelectedDisplayAddress] = useState(null);
   const [allUserAddresses, setAllUserAddresses] = useState([]);
   const [isSelectAddressModalVisible, setSelectAddressModalVisible] =
     useState(false);
 
-  //tải địa chỉ người dùng lên
   useFocusEffect(
-    // useCallback để tránh việc tạo lại hàm fetchAddresses quá mức
     useCallback(() => {
       const fetchAddresses = async () => {
         const userId = await getUserId();
@@ -55,37 +52,27 @@ const CheckoutScreen = ({ navigation, route }) => {
     if (route.params?.selectedProducts) {
       setProducts(route.params.selectedProducts);
     }
-  }, [route.params?.selectedProducts]); // Chạy lại khi selectedProducts thay đổi
+  }, [route.params?.selectedProducts]);
 
-  // Tính tổng số tiền dựa trên các sản phẩm đã được truyền vào
-  const totalAmount = products.reduce(
+  const subtotal = products.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0
   );
 
-  const [isContactModalVisible, setContactModalVisible] = useState(false);
-  const [phoneNumber, setPhoneNumber] = useState("+84932000000"); // Initial data
-  const [email, setEmail] = useState("amandamorgan@example.com"); // Initial data
-
-  const handleSaveContact = () => {
-    console.log("Saving contact info:", { phoneNumber, email });
-    setContactModalVisible(false);
-  };
-
-  const [isAddressModalVisible, setAddressModalVisible] = useState(false);
-  const [addressLine1, setAddressLine1] = useState(
-    "26, Đường Số 2, P. Thảo Điền"
-  );
-  const [ward, setWard] = useState("An Phú");
-  const [district, setDistrict] = useState("Quận 2");
-  const [city, setCity] = useState("TP.HCM");
-
-  const handleSaveAddress = () => {
-    console.log("Saving address info:", { addressLine1, ward, district, city });
-    setAddressModalVisible(false);
-  };
-
   const [isVoucherModalVisible, setVoucherModalVisible] = useState(false);
+  const [appliedVoucher, setAppliedVoucher] = useState(null);
+  const [paymentMethod, setPaymentMethod] = useState("cod"); // 'cod' hoặc 'card'
+
+  const discountAmount = appliedVoucher ? subtotal * 0.05 : 0;
+  const totalAmount = subtotal - discountAmount;
+
+  const [isPaymentModalVisible, setPaymentModalVisible] = useState(false);
+  const [selectedPaymentMethodId, setSelectedPaymentMethodId] = useState(1);
+  
+  const [isFeedbackModalVisible, setFeedbackModalVisible] = useState(false);
+  const [feedbackType, setFeedbackType] = useState(null);
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+
   const vouchers = [
     {
       id: 1,
@@ -102,22 +89,6 @@ const CheckoutScreen = ({ navigation, route }) => {
       icon: "gift-outline",
     },
   ];
-
-  const [appliedVoucher, setAppliedVoucher] = useState(null);
-
-  const handleApplyVoucher = (voucher) => {
-    console.log("Applying voucher:", voucher);
-    setAppliedVoucher(voucher);
-    setVoucherModalVisible(false);
-  };
-
-  const handleRemoveVoucher = () => {
-    console.log("Removing voucher:", appliedVoucher);
-    setAppliedVoucher(null);
-  };
-
-  const [isPaymentModalVisible, setPaymentModalVisible] = useState(false);
-  const [selectedPaymentMethodId, setSelectedPaymentMethodId] = useState(1);
 
   const mockPaymentMethods = [
     {
@@ -136,61 +107,117 @@ const CheckoutScreen = ({ navigation, route }) => {
     },
   ];
 
+  const handleApplyVoucher = (voucher) => {
+    console.log("Applying voucher:", voucher);
+    setAppliedVoucher(voucher);
+    setVoucherModalVisible(false);
+  };
+
+  const handleRemoveVoucher = () => {
+    console.log("Removing voucher:", appliedVoucher);
+    setAppliedVoucher(null);
+  };
+  
   const handleSelectPaymentMethod = (id) => {
     setSelectedPaymentMethodId(id);
   };
 
-  const [isFeedbackModalVisible, setFeedbackModalVisible] = useState(false);
-  const [feedbackType, setFeedbackType] = useState(null);
-
-  const handleCheckout = () => {
-    const success = Math.random() > 0.5;
-
-    if (success) {
-      setFeedbackType("success");
-    } else {
-      setFeedbackType("failure");
+  const handlePlaceOrder = async () => {
+    if (!selectedDisplayAddress) {
+      Alert.alert("Lỗi", "Vui lòng chọn địa chỉ giao hàng.");
+      return;
     }
-    setFeedbackModalVisible(true);
-  };
+    if (products.length === 0) {
+      Alert.alert("Lỗi", "Không có sản phẩm nào để đặt hàng.");
+      return;
+    }
 
-  const handleTryAgain = () => {
-    setFeedbackModalVisible(false);
-    console.log("Attempting checkout again...");
-  };
+    const buyerId = await getUserId();
+    if (!buyerId) {
+      Alert.alert("Lỗi", "Không thể xác thực người dùng. Vui lòng đăng nhập lại.");
+      navigation.replace("Login");
+      return;
+    }
 
-  const handleChangePaymentMethod = () => {
-    setFeedbackModalVisible(false);
-    setPaymentModalVisible(true);
-  };
+    let sellerId = null;
+    if (products.length > 0) {
+      sellerId = products[0].sellerId;
+    }
+    
+    if (!sellerId) {
+      Alert.alert("Lỗi", "Không thể xác định người bán. Vui lòng thử lại.");
+      return;
+    }
 
-  const handleViewOrder = () => {
-    setFeedbackModalVisible(false);
-    console.log("Navigating to order details...");
-    navigation.navigate("OrderDetails");
+    const invalidProducts = products.filter(item => !item.productId || !item.quantity || item.quantity <= 0);
+    if (invalidProducts.length > 0) {
+      Alert.alert("Lỗi", "Dữ liệu sản phẩm không hợp lệ. Vui lòng thử lại.");
+      return;
+    }
+
+    const orderData = {
+      buyerId: parseInt(buyerId),
+      sellerId: parseInt(sellerId),
+      addressId: selectedDisplayAddress.addressId,
+      discountAmount: discountAmount,
+      paymentMethod: paymentMethod,
+      orderDetails: products.map((item) => ({
+        productId: item.productId,
+        quantity: item.quantity,
+        snapshotPrice: item.price,
+      })),
+    };
+
+    console.log("Sending order data:", orderData);
+    setIsPlacingOrder(true);
+    try {
+      const result = await createOrder(orderData);
+      if (result) {
+        // Chỉ xóa cart items nếu không phải là mua ngay
+        const isBuyNow = route.params?.isBuyNow;
+        if (!isBuyNow) {
+          const purchasedCartIds = products.map(p => p.id);
+          await deleteMultipleCartItems(purchasedCartIds);
+        }
+
+        Alert.alert(
+          "Thành công", 
+          `Đơn hàng của bạn đã được tạo thành công!\nMã đơn hàng: ${result.orderId}`, 
+          [
+            {
+              text: "Xem đơn hàng",
+              onPress: () => navigation.navigate("OrderDetails", { orderId: result.orderId }),
+            },
+            {
+              text: "Về trang chủ",
+              onPress: () => navigation.popToTop(),
+            },
+          ]
+        );
+      }
+    } catch (error) {
+      console.error("Lỗi khi tạo đơn hàng:", error);
+    } finally {
+      setIsPlacingOrder(false);
+    }
   };
 
   return (
     <SafeAreaView style={styles.safeAreaContainer}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color="black" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Thanh toán</Text>
         <View style={{ width: 24 }} />
-        {/* Spacer */}
       </View>
 
       <ScrollView style={styles.scrollView}>
-        {/* Địa chỉ giao hàng */}
         <View style={styles.sectionContainer}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Thông tin người mua</Text>
-            {/* Nút "Thay đổi" hoặc "Cập nhật thêm địa chỉ" */}
+            <Text style={styles.sectionTitle}>Thông tin người mua</Text>
             {allUserAddresses.length > 0 ? (
               <TouchableOpacity
-                // Khi nhấn vào nút "Thay đổi", mở modal chọn địa chỉ
                 onPress={() => navigation.navigate("EditProfile")}
               >
                 <Text style={styles.changeAddressButtonText}>Thay đổi</Text>
@@ -213,7 +240,7 @@ const CheckoutScreen = ({ navigation, route }) => {
                   {selectedDisplayAddress.phoneNumber}
                 </Text>
                 <Text style={styles.infoText}>
-                  {selectedDisplayAddress.addressLine},{" "}
+                  {selectedDisplayAddress.addressLine}, {" "}
                   {selectedDisplayAddress.city}
                 </Text>
               </>
@@ -225,7 +252,6 @@ const CheckoutScreen = ({ navigation, route }) => {
           </View>
         </View>
 
-        {/* Sản phẩm */}
         <View style={styles.sectionContainer}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Sản phẩm</Text>
@@ -258,10 +284,7 @@ const CheckoutScreen = ({ navigation, route }) => {
             <View key={item.id} style={styles.productItem}>
               <Image source={{ uri: item.image }} style={styles.productImage} />
               <View style={styles.productInfo}>
-                <Text style={styles.productName}>{item.name}</Text>
-                <Text
-                  style={styles.productColorSize}
-                >{`${item.color}, Size ${item.size}`}</Text>
+                <Text style={styles.productName}>{item.title || item.name}</Text>
                 <Text style={styles.productPrice}>
                   {item.price.toLocaleString("vi-VN")}đ
                 </Text>
@@ -273,152 +296,55 @@ const CheckoutScreen = ({ navigation, route }) => {
           ))}
         </View>
 
-        {/* Phương thức thanh toán */}
         <View style={styles.sectionContainer}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Phương thức thanh toán</Text>
-            <TouchableOpacity onPress={() => setPaymentModalVisible(true)}>
-              <Ionicons name="pencil" size={20} color="#323660" />
-            </TouchableOpacity>
           </View>
-          <View style={styles.sectionContent}>
-            <TouchableOpacity style={styles.paymentMethodButton}>
-              <Text style={styles.paymentMethodButtonText}>Card</Text>
+          <View style={styles.paymentMethodContainer}>
+            <TouchableOpacity 
+              style={[styles.paymentMethodButton, paymentMethod === 'cod' && styles.paymentMethodButtonSelected]}
+              onPress={() => setPaymentMethod('cod')}
+            >
+              <Text style={[styles.paymentMethodButtonText, paymentMethod === 'cod' && styles.paymentMethodButtonTextSelected]}>COD</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.paymentMethodButton, paymentMethod === 'card' && styles.paymentMethodButtonSelected]}
+              onPress={() => {
+                setPaymentMethod('card');
+                setPaymentModalVisible(true);
+              }}
+            >
+              <Text style={[styles.paymentMethodButtonText, paymentMethod === 'card' && styles.paymentMethodButtonTextSelected]}>Card</Text>
             </TouchableOpacity>
           </View>
         </View>
       </ScrollView>
 
-      {/* Footer Total and Checkout Button */}
       <View style={styles.footer}>
-        <View style={styles.totalContainer}>
-          <Text style={styles.totalText}>Tổng cộng:</Text>
-          <Text style={styles.totalAmount}>
-            {totalAmount.toLocaleString("vi-VN")}đ
-          </Text>
+        <View>
+          {appliedVoucher && (
+             <Text style={styles.discountText}>Giảm giá: -{discountAmount.toLocaleString("vi-VN")}đ</Text>
+          )}
+          <View style={styles.totalContainer}>
+             <Text style={styles.totalText}>Tổng cộng:</Text>
+             <Text style={styles.totalAmount}>
+                {totalAmount.toLocaleString("vi-VN")}đ
+             </Text>
+          </View>
         </View>
         <TouchableOpacity
-          style={styles.checkoutButton}
-          onPress={handleCheckout}
+          style={[styles.checkoutButton, isPlacingOrder && styles.checkoutButtonDisabled]}
+          onPress={handlePlaceOrder}
+          disabled={isPlacingOrder}
         >
-          <Text style={styles.checkoutButtonText}>Thanh toán</Text>
+          {isPlacingOrder ? (
+            <Text style={styles.checkoutButtonText}>Đang xử lý...</Text>
+          ) : (
+            <Text style={styles.checkoutButtonText}>Đặt hàng</Text>
+          )}
         </TouchableOpacity>
       </View>
 
-      {/* Contact Edit Modal */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={isContactModalVisible}
-        onRequestClose={() => setContactModalVisible(false)}
-      >
-        <View style={styles.modalBackground}>
-          <View style={styles.modalContainer}>
-            {/* Modal Header */}
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Thông tin liên hệ</Text>
-              <TouchableOpacity onPress={() => setContactModalVisible(false)}>
-                <Ionicons name="arrow-forward" size={24} color="#323660" />
-              </TouchableOpacity>
-            </View>
-
-            {/* Modal Content */}
-            <View style={styles.modalContent}>
-              {/* Phone Number Input */}
-              <Text style={styles.label}>Số điện thoại</Text>
-              <TextInput
-                style={styles.input}
-                keyboardType="phone-pad"
-                value={phoneNumber}
-                onChangeText={setPhoneNumber}
-              />
-
-              {/* Email Input */}
-              <Text style={styles.label}>Email</Text>
-              <TextInput
-                style={styles.input}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                value={email}
-                onChangeText={setEmail}
-              />
-
-              {/* Save Button */}
-              <TouchableOpacity
-                style={styles.saveButton}
-                onPress={handleSaveContact}
-              >
-                <Text style={styles.saveButtonText}>Lưu thay đổi</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Address Edit Modal */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={isAddressModalVisible}
-        onRequestClose={() => setAddressModalVisible(false)}
-      >
-        <View style={styles.modalBackground}>
-          <View style={styles.modalContainer}>
-            {/* Modal Header */}
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Địa chỉ giao hàng</Text>
-              <TouchableOpacity onPress={() => setAddressModalVisible(false)}>
-                <Ionicons name="arrow-forward" size={24} color="#323660" />
-              </TouchableOpacity>
-            </View>
-
-            {/* Modal Content */}
-            <View style={styles.modalContent}>
-              {/* Address Line 1 Input (Tên đường/số nhà)*/}
-              <Text style={styles.label}>Tên đường/số nhà</Text>
-              <TextInput
-                style={styles.input}
-                value={addressLine1}
-                onChangeText={setAddressLine1}
-              />
-
-              {/* Ward Input (Xã/phường/thị trấn)*/}
-              <Text style={styles.label}>Xã/phường/thị trấn</Text>
-              <TextInput
-                style={styles.input}
-                value={ward}
-                onChangeText={setWard}
-              />
-
-              {/* District Input (Quận/Huyện)*/}
-              <Text style={styles.label}>Quận/Huyện</Text>
-              <TextInput
-                style={styles.input}
-                value={district}
-                onChangeText={setDistrict}
-              />
-
-              {/* City Input (Thành phố, tỉnh)*/}
-              <Text style={styles.label}>Thành phố, tỉnh</Text>
-              <TextInput
-                style={styles.input}
-                value={city}
-                onChangeText={setCity}
-              />
-
-              {/* Save Button */}
-              <TouchableOpacity
-                style={styles.saveButton}
-                onPress={handleSaveAddress}
-              >
-                <Text style={styles.saveButtonText}>Lưu thay đổi</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Voucher Modal */}
       <Modal
         animationType="slide"
         transparent={true}
@@ -427,15 +353,12 @@ const CheckoutScreen = ({ navigation, route }) => {
       >
         <View style={styles.modalBackground}>
           <View style={styles.modalContainer}>
-            {/* Modal Header */}
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Vouchers</Text>
               <TouchableOpacity onPress={() => setVoucherModalVisible(false)}>
                 <Ionicons name="close" size={24} color="#333" />
               </TouchableOpacity>
             </View>
-
-            {/* Modal Content - Vouchers List */}
             <ScrollView style={styles.modalContent}>
               {vouchers.map((voucher) => (
                 <View key={voucher.id} style={styles.voucherItem}>
@@ -468,7 +391,6 @@ const CheckoutScreen = ({ navigation, route }) => {
         </View>
       </Modal>
 
-      {/* Payment Method Modal */}
       <Modal
         animationType="slide"
         transparent={true}
@@ -477,15 +399,12 @@ const CheckoutScreen = ({ navigation, route }) => {
       >
         <View style={styles.modalBackground}>
           <View style={styles.modalContainer}>
-            {/* Modal Header */}
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Phương thức thanh toán</Text>
               <TouchableOpacity onPress={() => setPaymentModalVisible(false)}>
                 <Ionicons name="arrow-forward" size={24} color="#333" />
               </TouchableOpacity>
             </View>
-
-            {/* Modal Content - Payment Options */}
             <ScrollView
               style={styles.modalContentHorizontal}
               horizontal={true}
@@ -497,20 +416,17 @@ const CheckoutScreen = ({ navigation, route }) => {
                   style={styles.paymentCard}
                   onPress={() => handleSelectPaymentMethod(card.id)}
                 >
-                  {/* Card Brand Icon */}
                   <View style={styles.cardBrandIconContainer}>
                     <Text style={styles.cardBrandText}>
                       {card.brand === "mastercard" ? "MC" : "Visa"}
                     </Text>
                   </View>
-                  {/* Card Details */}
                   <View style={styles.cardDetails}>
                     <Text style={styles.cardNumber}>
                       **** **** **** {card.last4}
                     </Text>
                     <Text style={styles.cardholderName}>{card.cardholder}</Text>
                   </View>
-                  {/* Expiry and Settings/Check Icon */}
                   <View style={styles.cardRightInfo}>
                     {selectedPaymentMethodId === card.id ? (
                       <Ionicons
@@ -531,8 +447,6 @@ const CheckoutScreen = ({ navigation, route }) => {
                   </View>
                 </TouchableOpacity>
               ))}
-
-              {/* Add New Payment Method Card */}
               <TouchableOpacity
                 style={styles.addPaymentMethodCard}
                 onPress={() => {
@@ -545,87 +459,6 @@ const CheckoutScreen = ({ navigation, route }) => {
           </View>
         </View>
       </Modal>
-
-      {/* Feedback Modal (Success or Failure) */}
-      <Modal
-        animationType="fade"
-        transparent={true}
-        visible={isFeedbackModalVisible}
-        onRequestClose={() => setFeedbackModalVisible(false)}
-      >
-        <View style={styles.feedbackModalBackground}>
-          <View style={styles.feedbackModalContainer}>
-            {feedbackType === "failure" && (
-              <View style={styles.feedbackContent}>
-                {/* Failure Icon */}
-                <View style={styles.feedbackIconContainerFailure}>
-                  <Ionicons name="warning" size={40} color="#fff" />
-                </View>
-                {/* Failure Message and Description */}
-                <Text style={styles.feedbackTitle}>
-                  Chúng tôi không thể tiến hành thanh toán của bạn
-                </Text>
-                <Text style={styles.feedbackDescription}>
-                  Vui lòng thay đổi phương thức thanh toán hoặc thử lại
-                </Text>
-                {/* Failure Buttons */}
-                <View style={styles.feedbackButtonContainer}>
-                  <TouchableOpacity
-                    style={[
-                      styles.feedbackButton,
-                      styles.feedbackButtonSecondary,
-                    ]}
-                    onPress={handleTryAgain}
-                  >
-                    <Text style={styles.feedbackButtonTextSecondary}>
-                      Thử lại
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[
-                      styles.feedbackButton,
-                      styles.feedbackButtonPrimary,
-                    ]}
-                    onPress={handleChangePaymentMethod}
-                  >
-                    <Text style={styles.feedbackButtonTextPrimary}>
-                      Thay đổi
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
-
-            {feedbackType === "success" && (
-              <View style={styles.feedbackContent}>
-                {/* Success Icon */}
-                <View style={styles.feedbackIconContainerSuccess}>
-                  <Ionicons name="checkmark" size={40} color="#fff" />
-                </View>
-                {/* Success Message and Description */}
-                <Text style={styles.feedbackTitle}>Thành công</Text>
-                <Text style={styles.feedbackDescription}>
-                  Thanh toán đơn hàng của bạn đã hoàn tất
-                </Text>
-                {/* Success Button */}
-                <View style={styles.feedbackButtonContainer}>
-                  <TouchableOpacity
-                    style={[
-                      styles.feedbackButton,
-                      styles.feedbackButtonSecondary,
-                    ]}
-                    onPress={handleViewOrder}
-                  >
-                    <Text style={styles.feedbackButtonTextSecondary}>
-                      Xem đơn hàng
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
-          </View>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 };
@@ -633,7 +466,7 @@ const CheckoutScreen = ({ navigation, route }) => {
 const styles = StyleSheet.create({
   safeAreaContainer: {
     flex: 1,
-    backgroundColor: "#f8f8f8", // Light gray background
+    backgroundColor: "#f8f8f8",
   },
   header: {
     flexDirection: "row",
@@ -674,9 +507,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
   },
-  sectionContent: {
-    // Styles for content within sections if needed
-  },
+  sectionContent: {},
   infoText: {
     fontSize: 16,
     color: "#555",
@@ -727,11 +558,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "500",
   },
-  productColorSize: {
-    fontSize: 13,
-    color: "#666",
-    marginTop: 2,
-  },
   productPrice: {
     fontSize: 15,
     fontWeight: "bold",
@@ -750,20 +576,33 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#333",
   },
+  paymentMethodContainer: {
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    marginTop: 8,
+  },
   paymentMethodButton: {
-    backgroundColor: "#e0e0e0",
-    borderRadius: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    alignSelf: "flex-start",
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    marginRight: 12,
+    backgroundColor: '#f8f8f8'
+  },
+  paymentMethodButtonSelected: {
+    backgroundColor: '#323660',
+    borderColor: '#323660',
   },
   paymentMethodButtonText: {
     fontSize: 15,
     color: "#333",
+    fontWeight: '500'
   },
-
+  paymentMethodButtonTextSelected: {
+    color: '#fff',
+  },
   footer: {
-    paddingBottom: 50,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -777,10 +616,17 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 3,
     elevation: 10,
+    paddingBottom: 50,
   },
   totalContainer: {
     flexDirection: "row",
     alignItems: "center",
+  },
+  discountText: {
+    fontSize: 14,
+    color: 'green',
+    alignSelf: 'flex-end',
+    marginBottom: 2,
   },
   totalText: {
     fontSize: 18,
@@ -800,13 +646,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 24,
   },
+  checkoutButtonDisabled: {
+    backgroundColor: "#ccc",
+  },
   checkoutButtonText: {
     color: "#fff",
     fontSize: 18,
     fontWeight: "bold",
   },
-
-  // Modal Styles
   modalBackground: {
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.5)",
@@ -832,36 +679,21 @@ const styles = StyleSheet.create({
   modalContent: {
     paddingVertical: 10,
   },
-  label: {
-    fontSize: 16,
-    fontWeight: "bold",
-    marginTop: 8,
-    marginBottom: 4,
-    color: "#333",
-  },
-  input: {
-    backgroundColor: "#f8f8f8",
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: "#ddd",
-    marginBottom: 12,
-  },
-  saveButton: {
-    backgroundColor: "#323660",
-    borderRadius: 8,
-    paddingVertical: 14,
+  appliedVoucherChip: {
+    flexDirection: "row",
     alignItems: "center",
-    marginTop: 20,
+    backgroundColor: "#323660",
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    marginLeft: "auto",
   },
-  saveButtonText: {
+  appliedVoucherText: {
+    fontSize: 14,
     color: "#fff",
-    fontSize: 18,
     fontWeight: "bold",
+    marginRight: 4,
   },
-
-  // New Voucher Modal Styles
   voucherItem: {
     flexDirection: "row",
     backgroundColor: "#e0eaff",
@@ -936,25 +768,6 @@ const styles = StyleSheet.create({
     top: "50%",
     transform: [{ translateY: -15 }],
   },
-
-  // Styles for Applied Voucher Chip
-  appliedVoucherChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#323660",
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    marginLeft: "auto",
-  },
-  appliedVoucherText: {
-    fontSize: 14,
-    color: "#fff",
-    fontWeight: "bold",
-    marginRight: 4,
-  },
-
-  // New Payment Method Modal Styles
   modalContentHorizontal: {
     paddingHorizontal: 10,
   },
@@ -1012,82 +825,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginLeft: 12,
-  },
-
-  // Styles for Feedback Modals (Success/Failure)
-  feedbackModalBackground: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  feedbackModalContainer: {
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    padding: 20,
-    marginHorizontal: 20,
-    alignItems: "center",
-  },
-  feedbackContent: {
-    alignItems: "center", // Center content horizontally
-  },
-  feedbackIconContainerSuccess: {
-    backgroundColor: "#4CAF50", // Green for success
-    borderRadius: 50,
-    width: 80,
-    height: 80,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  feedbackIconContainerFailure: {
-    backgroundColor: "#f44336", // Red for failure
-    borderRadius: 50,
-    width: 80,
-    height: 80,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  feedbackTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    marginBottom: 10,
-    textAlign: "center",
-  },
-  feedbackDescription: {
-    fontSize: 16,
-    color: "#666",
-    marginBottom: 20,
-    textAlign: "center",
-  },
-  feedbackButtonContainer: {
-    flexDirection: "row",
-    marginTop: 10,
-  },
-  feedbackButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    marginHorizontal: 5,
-  },
-  feedbackButtonPrimary: {
-    backgroundColor: "#323660",
-  },
-  feedbackButtonSecondary: {
-    backgroundColor: "#f0f0f0",
-    borderWidth: 1,
-    borderColor: "#ddd",
-  },
-  feedbackButtonTextPrimary: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  feedbackButtonTextSecondary: {
-    color: "#333",
-    fontSize: 16,
-    fontWeight: "bold",
   },
 });
 

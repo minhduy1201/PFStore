@@ -322,6 +322,39 @@ export default function ProductDetail({ route, navigation }) {
     }
   };
 
+  // Hàm xử lý mua ngay
+  const handleBuyNow = async () => {
+    const userId = await getUserId();
+    if (!userId) {
+      Alert.alert("Lỗi", "Vui lòng đăng nhập để mua hàng.");
+      return;
+    }
+
+    if (!product) {
+      Alert.alert("Lỗi", "Không tìm thấy thông tin sản phẩm.");
+      return;
+    }
+
+    // Tạo đối tượng sản phẩm để truyền đến CheckoutScreen
+    const selectedProduct = {
+      productId: product.productId,
+      title: product.title,
+      price: product.price,
+      quantity: 1, // Mặc định số lượng là 1 khi mua ngay
+      image: product.images && product.images.length > 0 ? product.images[0] : null,
+      sellerId: product.seller?.userId || null,
+      sellerName: product.seller?.fullName || "Người bán",
+      // Thêm id giả để tương thích với logic xóa cart items (nếu cần)
+      id: `buynow_${product.productId}_${Date.now()}`
+    };
+
+    // Điều hướng đến CheckoutScreen với sản phẩm được chọn
+    navigation.navigate("Checkout", {
+      selectedProducts: [selectedProduct],
+      isBuyNow: true // Flag để biết đây là mua ngay
+    });
+  };
+
   if (loading) {
     return (
       <View style={styles.centered}>
@@ -722,7 +755,7 @@ export default function ProductDetail({ route, navigation }) {
         >
           <Text style={styles.buttonText}>Thêm vào giỏ</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.buyNowButton}>
+        <TouchableOpacity style={styles.buyNowButton} onPress={handleBuyNow}>
           <Text style={styles.buttonText}>Mua ngay</Text>
         </TouchableOpacity>
       </View>

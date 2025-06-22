@@ -87,6 +87,25 @@ export const deleteCart = async (cardId) => {
   }
 };
 
+// Xóa nhiều sản phẩm khỏi giỏ hàng
+export const deleteMultipleCartItems = async (cartIds) => {
+  if (!cartIds || cartIds.length === 0) {
+    console.log("Không có sản phẩm nào để xóa.");
+    return true;
+  }
+  try {
+    const response = await api.delete("/Carts/bulk-delete", { data: cartIds });
+    if (response.status === 204) {
+      console.log("Các sản phẩm đã được xóa khỏi giỏ hàng:", cartIds);
+      return true;
+    }
+  } catch (error) {
+    console.error("Lỗi khi xóa nhiều sản phẩm khỏi giỏ hàng:", error);
+    // Có thể thêm xử lý lỗi cụ thể hơn ở đây nếu cần
+    return false;
+  }
+};
+
 //cập nhật số lượng giỏ hàng
 export const updateQuantityCart = async (cartId, newQuantity) => {
   const userId = await getUserId();

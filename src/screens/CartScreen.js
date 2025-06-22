@@ -47,6 +47,8 @@ const formatBackendCartItemToFrontend = (backendItem) => {
 
     size: "N/A",
 
+    sellerId: backendItem.product ? backendItem.product.sellerId : null,
+
     isSelected: true, //mặc định là sản phẩm chưa được chọn
   };
 };
