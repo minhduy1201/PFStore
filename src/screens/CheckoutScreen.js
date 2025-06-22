@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react"; // Import useEffect
+import React, { useCallback, useState, useEffect } from "react"; // Import useEffect
+import { useFocusEffect } from "@react-navigation/native";
 import {
   View,
   Text,
@@ -11,12 +12,44 @@ import {
   TextInput,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { getUserAddresses } from "../servers/AddressService";
+import { getUserId } from "../servers/AuthenticationService";
 
 // Nhận `route` prop để truy cập params
 const CheckoutScreen = ({ navigation, route }) => {
   // Lấy danh sách sản phẩm đã chọn từ navigation params
   // Sử dụng một mảng rỗng làm giá trị mặc định nếu không có params
   const [products, setProducts] = useState([]);
+  //lưu địa chỉ được hiển thị trên ui hiện tại
+  const [selectedDisplayAddress, setSelectedDisplayAddress] = useState(null);
+  const [allUserAddresses, setAllUserAddresses] = useState([]);
+  const [isSelectAddressModalVisible, setSelectAddressModalVisible] =
+    useState(false);
+
+  //tải địa chỉ người dùng lên
+  useFocusEffect(
+    // useCallback để tránh việc tạo lại hàm fetchAddresses quá mức
+    useCallback(() => {
+      const fetchAddresses = async () => {
+        const userId = await getUserId();
+        const addresses = await getUserAddresses(userId);
+        setAllUserAddresses(addresses);
+
+        if (addresses.length > 0) {
+          const defaultAddress = addresses.find((addr) => addr.isDefault);
+          if (defaultAddress) {
+            setSelectedDisplayAddress(defaultAddress);
+          } else {
+            setSelectedDisplayAddress(addresses[0]);
+          }
+        } else {
+          setSelectedDisplayAddress(null);
+        }
+      };
+
+      fetchAddresses();
+    }, [])
+  );
 
   useEffect(() => {
     if (route.params?.selectedProducts) {
@@ -153,30 +186,42 @@ const CheckoutScreen = ({ navigation, route }) => {
         {/* Địa chỉ giao hàng */}
         <View style={styles.sectionContainer}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Địa chỉ giao hàng</Text>
-            <TouchableOpacity onPress={() => setAddressModalVisible(true)}>
-              <Ionicons name="pencil" size={20} color="#323660" />
-            </TouchableOpacity>
+            <Text style={styles.sectionTitle}>Thông tin người mua</Text>
+            {/* Nút "Thay đổi" hoặc "Cập nhật thêm địa chỉ" */}
+            {allUserAddresses.length > 0 ? (
+              <TouchableOpacity
+                // Khi nhấn vào nút "Thay đổi", mở modal chọn địa chỉ
+                onPress={() => navigation.navigate("EditProfile")}
+              >
+                <Text style={styles.changeAddressButtonText}>Thay đổi</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                onPress={() => navigation.navigate("EditProfile")}
+              >
+                <Text style={styles.addAddressButtonText}>
+                  Cập nhật thêm địa chỉ
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
           <View style={styles.sectionContent}>
-            <Text style={styles.infoText}>
-              26, Đường Số 2, P. Thảo Điền, An Phú, Quận 2,
-            </Text>
-            <Text style={styles.infoText}>TP.HCM</Text>
-          </View>
-        </View>
-
-        {/* Thông tin liên hệ */}
-        <View style={styles.sectionContainer}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Thông tin liên hệ</Text>
-            <TouchableOpacity onPress={() => setContactModalVisible(true)}>
-              <Ionicons name="pencil" size={20} color="#323660" />
-            </TouchableOpacity>
-          </View>
-          <View style={styles.sectionContent}>
-            <Text style={styles.infoText}>+84932000000</Text>
-            <Text style={styles.infoText}>amandamorgan@example.com</Text>
+            {selectedDisplayAddress ? (
+              <>
+                <Text style={styles.infoText}>
+                  {selectedDisplayAddress.fullName} -{" "}
+                  {selectedDisplayAddress.phoneNumber}
+                </Text>
+                <Text style={styles.infoText}>
+                  {selectedDisplayAddress.addressLine},{" "}
+                  {selectedDisplayAddress.city}
+                </Text>
+              </>
+            ) : (
+              <Text style={styles.infoText}>
+                Chưa có địa chỉ nào được chọn.
+              </Text>
+            )}
           </View>
         </View>
 
