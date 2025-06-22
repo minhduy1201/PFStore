@@ -395,6 +395,25 @@ export default function ProductDetail({ route, navigation }) {
     ? descriptionLines
     : descriptionLines.slice(0, MAX_DESCRIPTION_LINES);
 
+  const ratings = product.ratings || [];
+  const totalReviews = ratings.length;
+  const averageRating = totalReviews > 0 ? ratings.reduce((acc, curr) => acc + (curr.stars || 0), 0) / totalReviews : 0;
+
+  const renderStars = (starCount) => {
+    const stars = [];
+    for (let i = 1; i <= 5; i++) {
+      stars.push(
+        <Ionicons
+          key={i}
+          name={i <= starCount ? "star" : "star-outline"}
+          size={16}
+          color="#FFC107"
+        />
+      );
+    }
+    return <View style={styles.starRatingContainer}>{stars}</View>;
+  };
+
   return (
     <KeyboardAvoidingView
       style={styles.fullScreenContainer}
@@ -522,6 +541,41 @@ export default function ProductDetail({ route, navigation }) {
               <Ionicons name="chevron-forward" size={24} color="#ccc" />
             </TouchableOpacity>
           )}
+          {/* Ratings & Reviews Section */}
+          <View style={styles.ratingsSection}>
+            <Text style={styles.sectionTitle}>Đánh giá & Xếp hạng</Text>
+            {totalReviews > 0 ? (
+              <>
+                <View style={styles.ratingSummary}>
+                  <Text style={styles.averageRatingText}>{averageRating.toFixed(1)}</Text>
+                  <View>
+                    {renderStars(averageRating)}
+                    <Text style={styles.totalReviewsText}>({totalReviews} đánh giá)</Text>
+                  </View>
+                </View>
+                <View style={styles.ratingList}>
+                  {ratings.map((rating) => (
+                    <View key={rating.ratingId} style={styles.ratingItem}>
+                      <Image 
+                        source={rating.user?.avatarUrl ? { uri: rating.user.avatarUrl } : require('../../assets/images/icon.png')} 
+                        style={styles.commentAvatar} 
+                      />
+                      <View style={styles.ratingContent}>
+                        <View style={styles.ratingHeader}>
+                           <Text style={styles.commentAuthor}>{rating.user?.fullName || 'Người dùng ẩn danh'}</Text>
+                           {renderStars(rating.stars)}
+                        </View>
+                        <Text style={styles.commentTimestamp}>{new Date(rating.createdAt).toLocaleDateString('vi-VN')}</Text>
+                        <Text style={styles.commentContent}>{rating.comment}</Text>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              </>
+            ) : (
+              <Text style={styles.noCommentsText}>Chưa có đánh giá nào.</Text>
+            )}
+          </View>
           {/* Bình luận */}
           <View style={styles.commentsSection}>
             <Text style={styles.commentsTitle}>Bình luận</Text>
@@ -1162,5 +1216,56 @@ const styles = StyleSheet.create({
     justifyContent: "center", // Căn giữa icon trong nút
     alignItems: "center", // Căn giữa icon trong nút
     height: 45, // Đảm bảo chiều cao tương đương với TextInput
+  },
+  // --- Ratings Section ---
+  ratingsSection: {
+    marginTop: 20,
+    paddingVertical: 15,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 15,
+    color: '#333',
+  },
+  ratingSummary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  averageRatingText: {
+    fontSize: 48,
+    fontWeight: 'bold',
+    color: '#333',
+    marginRight: 15,
+  },
+  starRatingContainer: {
+    flexDirection: 'row',
+  },
+  totalReviewsText: {
+    fontSize: 14,
+    color: '#777',
+    marginTop: 4,
+  },
+  ratingList: {
+    // container for all rating items
+  },
+  ratingItem: {
+    flexDirection: 'row',
+    marginBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f5f5f5',
+    paddingBottom: 15,
+  },
+  ratingContent: {
+    flex: 1,
+  },
+  ratingHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 5,
   },
 });
