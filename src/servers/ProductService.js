@@ -99,5 +99,15 @@ export const updatePost = async (postId, updatedProductData) => {
   }
 };
 
+export const createRating = async (ratingData) => {
+  try {
+    const response = await api.post("/Ratings", ratingData);
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "Gửi đánh giá thất bại. Vui lòng thử lại.");
+    throw error;
+  }
+};
+
 
 

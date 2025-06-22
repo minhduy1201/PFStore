@@ -25,6 +25,7 @@ import PostsScreen from "./src/screens/PostsScreen";
 import OrdersScreen from "./src/screens/OrdersScreen";
 import ProductDetail from "./src/screens/ProductDetail";
 import AppInfoScreen from "./src/screens/AppInfoScreen";
+import RateProductsScreen from "./src/screens/RateProductsScreen";
 
 import CartScreen from "./src/screens/CartScreen";
 import CheckoutScreen from "./src/screens/CheckoutScreen";
@@ -204,6 +205,7 @@ export default function App() {
 
         <Stack.Screen name="EditProfile" component={EditProfileScreen} />
         <Stack.Screen name="SearchProducts" component={SearchProductsScreen} />
+        <Stack.Screen name="RateProducts" component={RateProductsScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
