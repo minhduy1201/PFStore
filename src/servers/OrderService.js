@@ -12,6 +12,43 @@ export const createOrder = async (orderData) => {
   }
 };
 
+//chấp nhận đơn hàng
+export const acceptOrder = async (orderId) => {
+  try {
+    if (!orderId) {
+      console.warn("ID đơn hàng không hợp lệ để chấp nhận.");
+      throw new Error("ID đơn hàng không hợp lệ.");
+    }
+    // Gọi API PUT: /api/Order/{orderId}/accept
+    const res = await api.put(`/Order/${orderId}/accept`);
+    return res.data; // Trả về thông báo thành công từ backend
+  } catch (error) {
+    console.error(
+      `Lỗi khi chấp nhận đơn hàng #${orderId}:`,
+      error.response?.data || error.message
+    );
+    throw error; // Ném lỗi để component gọi có thể xử lý
+  }
+};
+
+// ---  Từ chối Đơn hàng ---
+export const rejectOrder = async (orderId) => {
+  try {
+    if (!orderId) {
+      console.warn("ID đơn hàng không hợp lệ để từ chối.");
+      throw new Error("ID đơn hàng không hợp lệ.");
+    }
+    // Gọi API PUT: /api/Order/{orderId}/reject
+    const res = await api.put(`/Order/${orderId}/reject`);
+    return res.data; // Trả về thông báo thành công từ backend
+  } catch (error) {
+    console.error(
+      `Lỗi khi từ chối đơn hàng #${orderId}:`,
+      error.response?.data || error.message
+    );
+    throw error; // Ném lỗi để component gọi có thể xử lý
+  }
+};
 // Hàm lấy chi tiết đơn hàng theo ID
 export const getOrderById = async (orderId) => {
   try {
@@ -66,3 +103,4 @@ export const cancelOrder = async (orderId) => {
     return null;
   }
 }; 
+
