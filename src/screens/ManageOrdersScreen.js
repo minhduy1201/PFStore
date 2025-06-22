@@ -38,7 +38,8 @@ const ManageOrdersScreen = ({ navigation }) => {
             if (fetchedOrders) {
               const userIdInt = parseInt(userId);
               const formattedOrders = fetchedOrders.map(order => {
-                const allProductsReviewed = order.orderDetails.every(detail =>
+                const details = Array.isArray(order.orderDetails) ? order.orderDetails : [];
+                const allProductsReviewed = details.every(detail =>
                   detail.product.ratings.some(rating => rating.userId === userIdInt)
                 );
 
@@ -46,7 +47,7 @@ const ManageOrdersScreen = ({ navigation }) => {
                   id: order.orderId, // Use orderId as the key
                   orderId: `#${order.orderId}`,
                   rawOrderId: order.orderId,
-                  products: order.orderDetails.map(detail => ({
+                  products: details.map(detail => ({
                     productId: detail.product.productId,
                     name: detail.product.title,
                     image: detail.product.productImages && detail.product.productImages.length > 0
