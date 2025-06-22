@@ -1,4 +1,3 @@
-// src/screens/PostsScreen.js
 import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
@@ -10,49 +9,91 @@ import {
   Alert,
   SafeAreaView,
   Platform,
-  RefreshControl, // Thêm RefreshControl để kéo xuống làm mới
+  RefreshControl,
 } from "react-native";
 import ProductCard from "../components/ProductCard";
-import { fetchUserPosts, deletePost } from "../servers/ProductService"; // Import hàm fetchUserPosts và deletePost
-import { MaterialIcons } from "@expo/vector-icons"; // Để icon thêm sản phẩm
-import AsyncStorage from "@react-native-async-storage/async-storage"; // Để lưu trữ userId
+import { fetchUserPosts, deletePost } from "../servers/ProductService";
+import { MaterialIcons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useFocusEffect } from "@react-navigation/native"; // Import useFocusEffect
 
 const PostsScreen = ({ navigation }) => {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [refreshing, setRefreshing] = useState(false); 
+  const [refreshing, setRefreshing] = useState(false);
+  const [userId, setUserId] = useState(null);
 
-  const [userId, setUserId] = useState(null); // State để lưu userId
+  // Hàm tải bài đăng. userId được truyền vào để đảm bảo load đúng dữ liệu.
+  const loadPosts = async (uid) => {
+    if (!uid) {
+      console.warn("userId chưa sẵn sàng để tải bài đăng.");
+      setLoading(false);
+      setRefreshing(false);
+      return;
+    }
+    try {
+      setLoading(true); // Đặt loading trước khi fetch
+      console.log("Gửi request với userId:", uid);
+      const data = await fetchUserPosts(uid);
+      console.log("✅ Dữ liệu sản phẩm người dùng:", data);
+      // Đảm bảo data là một mảng trước khi set
+      if (Array.isArray(data)) {
+        setPosts(data);
+        setError(null);
+      } else {
+        throw new Error("Dữ liệu trả về không phải là mảng.");
+      }
+    } catch (err) {
+      console.error("Lỗi khi fetch user posts:", err);
+      setError("Không thể tải danh sách sản phẩm của bạn. Vui lòng thử lại.");
+      setPosts([]); // Xóa posts nếu có lỗi
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  // Sử dụng useEffect để lấy userId ban đầu
   useEffect(() => {
-    const init = async () => {
+    const getStoredUserId = async () => {
       try {
         const id = await AsyncStorage.getItem("userId");
         if (id && !isNaN(Number(id))) {
           const numericId = Number(id);
           setUserId(numericId);
-          await loadPosts(numericId);
         } else {
-          Alert.alert("Lỗi", "userId không hợp lệ.");
+          Alert.alert("Lỗi", "userId không hợp lệ hoặc không tìm thấy.");
+          setUserId(null); // Đảm bảo userId là null nếu không hợp lệ
         }
       } catch (e) {
         Alert.alert("Lỗi", "Không lấy được userId từ bộ nhớ.");
-      } finally {
-        setLoading(false);
+        setUserId(null);
       }
     };
-    init();
-  }, []);
+    getStoredUserId();
+  }, []); // Chỉ chạy một lần khi component mount
+
+  // Sử dụng useFocusEffect để tải lại bài đăng mỗi khi màn hình được focus
+  // và khi userId đã được set
+  useFocusEffect(
+    useCallback(() => {
+      // Đảm bảo userId đã có giá trị trước khi gọi loadPosts
+      if (userId !== null) {
+        loadPosts(userId);
+      }
+    }, [userId]) // Dependency userId: chạy lại khi userId thay đổi
+  );
 
   // Hàm xử lý khi người dùng nhấn vào một sản phẩm (xem chi tiết)
-  const handleProductPress = (product) => {
-    navigation.navigate("ProductDetail", { productId: product });
+  const handleProductPress = (productId) => {
+    // Truyền thẳng productId, không cần truyền cả object product nếu ProductDetail chỉ cần ID
+    navigation.navigate("ProductDetail", { productId: productId });
   };
 
   // Hàm xử lý khi người dùng nhấn nút "Chỉnh sửa"
-  const handleEditProduct = (product) => {
-    Alert.alert("Chỉnh sửa", `Bạn muốn chỉnh sửa sản phẩm: ${product.name}`);
-    // navigation.navigate('EditProduct', { productId: product }); // Truyền object sản phẩm để chỉnh sửa
+  const handleEditProduct = (productId) => {
+    navigation.navigate("CreatePost", { productId: productId });
   };
 
   // Hàm xử lý khi người dùng nhấn nút "Xóa"
@@ -70,21 +111,17 @@ const PostsScreen = ({ navigation }) => {
           onPress: async () => {
             setLoading(true); // Đặt loading khi bắt đầu xóa
             try {
-              const response = await deletePost(productId); // GỌI HÀM XÓA TỪ PRODUCT SERVICE
+              const response = await deletePost(productId);
               Alert.alert(
                 "Thành công",
                 response.message || "Sản phẩm đã được xóa!"
               );
-              // Cập nhật lại danh sách sản phẩm sau khi xóa thành công
               setPosts((prevPosts) =>
-                prevPosts.filter(
-                  (post) =>
-                    post.productId !== productId && post.id !== productId // lọc cả 2 trường
-                )
+                prevPosts.filter((post) => post.productId !== productId)
               );
             } catch (err) {
-              // Lỗi đã được handleApiError xử lý hiển thị Alert
               console.error("Lỗi xóa sản phẩm:", err);
+              Alert.alert("Lỗi", "Không thể xóa sản phẩm. Vui lòng thử lại.");
             } finally {
               setLoading(false); // Kết thúc xóa
             }
@@ -96,35 +133,24 @@ const PostsScreen = ({ navigation }) => {
     );
   };
 
-  const loadPosts = async (uid = userId) => {
-    try {
-      setLoading(true);
-      console.log("Gửi request với userId:", uid);
-      const data = await fetchUserPosts(uid);
-      console.log("✅ Dữ liệu sản phẩm người dùng:", data);
-      setPosts(data);
-      setError(null);
-    } catch (err) {
-      console.error("Lỗi khi fetch user posts:", err);
-      setError("Không thể tải danh sách sản phẩm của bạn. Vui lòng thử lại.");
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
+  // Hàm onRefresh cho RefreshControl, gọi lại loadPosts với userId hiện tại
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    loadPosts();
-  }, []);
+    if (userId !== null) {
+      loadPosts(userId);
+    } else {
+      setRefreshing(false); // Không thể refresh nếu userId chưa có
+    }
+  }, [userId]); // Dependency userId
 
   // Hàm xử lý khi người dùng nhấn nút "Đăng sản phẩm mới"
   const handleCreateNewPost = () => {
-    navigation.navigate('CreatePost'); // Chuyển sang màn hình tạo bài đăng mới
+    navigation.navigate("CreatePost"); // Chuyển sang màn hình tạo bài đăng mới
   };
 
   // --- Conditional Rendering ---
+  // Hiển thị loading ban đầu hoặc khi posts rỗng và đang tải lại
   if (loading && posts.length === 0) {
-    // Hiển thị loading ban đầu hoặc khi posts rỗng và đang tải lại
     return (
       <SafeAreaView style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#4472C4" />
@@ -137,7 +163,10 @@ const PostsScreen = ({ navigation }) => {
     return (
       <SafeAreaView style={styles.errorContainer}>
         <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={loadPosts}>
+        <TouchableOpacity
+          style={styles.retryButton}
+          onPress={() => loadPosts(userId)}
+        >
           <Text style={styles.retryButtonText}>Thử lại</Text>
         </TouchableOpacity>
       </SafeAreaView>
@@ -156,7 +185,7 @@ const PostsScreen = ({ navigation }) => {
         </TouchableOpacity>
       </View>
 
-      {posts.length === 0 && !loading ? ( // Chỉ hiển thị khi không loading và posts rỗng
+      {posts.length === 0 && !loading ? (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>
             Bạn chưa có sản phẩm nào đang rao bán.
@@ -172,16 +201,18 @@ const PostsScreen = ({ navigation }) => {
         <FlatList
           data={posts}
           keyExtractor={(item, index) =>
-            item?.id?.toString?.() || index.toString()
+            item?.productId?.toString() ||
+            item?.id?.toString() ||
+            index.toString()
           }
-          initialNumToRender={10} // Giảm tải ban đầu
-          maxToRenderPerBatch={10} // Giảm tải khi cuộn
+          initialNumToRender={10}
+          maxToRenderPerBatch={10}
           renderItem={({ item }) => (
             <ProductCard
               product={item}
-              onPress={handleProductPress}
-              onEdit={handleEditProduct} // Truyền hàm edit
-              onDelete={handleDeleteProduct} // Truyền hàm delete
+              onPress={() => handleProductPress(item.productId || item.id)}
+              onEdit={() => handleEditProduct(item.productId || item.id)}
+              onDelete={() => handleDeleteProduct(item.productId || item.id)}
             />
           )}
           numColumns={2}
@@ -189,22 +220,20 @@ const PostsScreen = ({ navigation }) => {
           columnWrapperStyle={styles.row}
           showsVerticalScrollIndicator={false}
           refreshControl={
-            // Thêm RefreshControl
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              colors={["#4472C4"]} // Màu biểu tượng refresh
-              tintColor="#4472C4" // Màu khi kéo
+              colors={["#4472C4"]}
+              tintColor="#4472C4"
             />
           }
         />
       )}
-      {loading &&
-        posts.length > 0 && ( // Hiển thị loading overlay khi đang tải lại và đã có dữ liệu
-          <View style={styles.overlayLoading}>
-            <ActivityIndicator size="large" color="#4472C4" />
-          </View>
-        )}
+      {loading && posts.length > 0 && (
+        <View style={styles.overlayLoading}>
+          <ActivityIndicator size="large" color="#4472C4" />
+        </View>
+      )}
     </SafeAreaView>
   );
 };
@@ -246,7 +275,6 @@ const styles = StyleSheet.create({
     color: "#555",
   },
   overlayLoading: {
-    // Loading overlay khi refresh hoặc thao tác
     position: "absolute",
     left: 0,
     right: 0,
