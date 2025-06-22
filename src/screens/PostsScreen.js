@@ -16,13 +16,12 @@ import ProductCard from "../components/ProductCard";
 import { fetchUserPosts, deletePost } from "../servers/ProductService"; // Import hàm fetchUserPosts và deletePost
 import { MaterialIcons } from "@expo/vector-icons"; // Để icon thêm sản phẩm
 import AsyncStorage from "@react-native-async-storage/async-storage"; // Để lưu trữ userId
-import { handleApiError } from "../servers/connection"; // Import hàm xử lý lỗi chung
 
 const PostsScreen = ({ navigation }) => {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [refreshing, setRefreshing] = useState(false); // State cho pull-to-refresh
+  const [refreshing, setRefreshing] = useState(false); 
 
   const [userId, setUserId] = useState(null); // State để lưu userId
   useEffect(() => {
