@@ -186,7 +186,15 @@ const CheckoutScreen = ({ navigation, route }) => {
           [
             {
               text: "Xem đơn hàng",
-              onPress: () => navigation.navigate("OrderDetails", { orderId: result.orderId }),
+              onPress: () => {
+                navigation.navigate("Main", {
+                  screen: "Orders",
+                  params: {
+                    screen: "OrderDetails",
+                    params: { orderId: result.orderId },
+                  },
+                });
+              },
             },
             {
               text: "Về trang chủ",
