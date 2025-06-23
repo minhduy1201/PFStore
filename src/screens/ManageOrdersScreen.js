@@ -7,7 +7,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
-  FlatList, // Use FlatList for rendering lists efficiently
+  FlatList,
   Modal,
   TextInput,
   Keyboard,
