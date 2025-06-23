@@ -17,6 +17,11 @@ import { getUserAddresses } from "../servers/AddressService";
 import { getUserId } from "../servers/AuthenticationService";
 import { createOrder } from "../servers/OrderService";
 import { deleteMultipleCartItems } from "../servers/CartService";
+import {
+  getAvailableVouchers,
+  decreaseVoucherQuantity,
+} from "../servers/VoucherService";
+import { WebView } from 'react-native-webview';
 
 const CheckoutScreen = ({ navigation, route }) => {
   const [products, setProducts] = useState([]);
@@ -24,7 +29,6 @@ const CheckoutScreen = ({ navigation, route }) => {
   const [allUserAddresses, setAllUserAddresses] = useState([]);
   const [isSelectAddressModalVisible, setSelectAddressModalVisible] =
     useState(false);
-
   useFocusEffect(
     useCallback(() => {
       const fetchAddresses = async () => {
@@ -47,7 +51,6 @@ const CheckoutScreen = ({ navigation, route }) => {
       fetchAddresses();
     }, [])
   );
-
   useEffect(() => {
     if (route.params?.selectedProducts) {
       setProducts(route.params.selectedProducts);
@@ -59,36 +62,51 @@ const CheckoutScreen = ({ navigation, route }) => {
     0
   );
 
-  const [isVoucherModalVisible, setVoucherModalVisible] = useState(false);
   const [appliedVoucher, setAppliedVoucher] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState("cod"); // 'cod' hoặc 'card'
 
-  const discountAmount = appliedVoucher ? subtotal * 0.05 : 0;
+  const discountAmount = appliedVoucher
+    ? Math.floor((subtotal * appliedVoucher.discountPercent) / 100)
+    : 0;
+
   const totalAmount = subtotal - discountAmount;
 
   const [isPaymentModalVisible, setPaymentModalVisible] = useState(false);
   const [selectedPaymentMethodId, setSelectedPaymentMethodId] = useState(1);
-  
+
   const [isFeedbackModalVisible, setFeedbackModalVisible] = useState(false);
   const [feedbackType, setFeedbackType] = useState(null);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+const [vouchers, setVouchers] = useState([]);
+const [isVoucherLoading, setVoucherLoading] = useState(false);
+const [isVoucherModalVisible, setVoucherModalVisible] = useState(false);
 
-  const vouchers = [
-    {
-      id: 1,
-      name: "Đơn hàng đầu tiên",
-      description: "Giảm 5% cho đơn hàng đầu tiên của bạn",
-      expiryDate: "5.16.20",
-      icon: "bag-handle-outline",
-    },
-    {
-      id: 2,
-      name: "Ưu đãi Giáng sinh",
-      description: "Giảm 15% cho đơn hàng trên 1 triệu",
-      expiryDate: "5.16.20",
-      icon: "gift-outline",
-    },
-  ];
+  const [paypalUrl, setPaypalUrl] = useState(null);
+  const [paypalOrderId, setPaypalOrderId] = useState(null);
+  const [showPaypalWebView, setShowPaypalWebView] = useState(false);
+
+// Khi subtotal thay đổi hoặc khi mở modal, tự động fetch voucher
+  useEffect(() => {
+    if (isVoucherModalVisible) {
+      const fetchVouchers = async () => {
+        setVoucherLoading(true);
+        try {
+          const userId = await getUserId();
+          const available = await getAvailableVouchers(userId, subtotal);
+          setVouchers(available || []);
+        } catch (err) {
+          setVouchers([]);
+        } finally {
+          setVoucherLoading(false);
+        }
+      };
+      fetchVouchers();
+    }
+  }, [isVoucherModalVisible, subtotal]);
+
+const openVoucherModal = () => {
+  setVoucherModalVisible(true);
+};
 
   const mockPaymentMethods = [
     {
@@ -117,11 +135,15 @@ const CheckoutScreen = ({ navigation, route }) => {
     console.log("Removing voucher:", appliedVoucher);
     setAppliedVoucher(null);
   };
-  
+
   const handleSelectPaymentMethod = (id) => {
     setSelectedPaymentMethodId(id);
   };
-
+const formatDate = (dateStr) => {
+  const d = new Date(dateStr);
+  return `${d.getDate().toString().padStart(2, "0")}/${(d.getMonth()+1)
+    .toString().padStart(2, "0")}/${d.getFullYear()}`;
+};
   const handlePlaceOrder = async () => {
     if (!selectedDisplayAddress) {
       Alert.alert("Lỗi", "Vui lòng chọn địa chỉ giao hàng.");
@@ -131,34 +153,36 @@ const CheckoutScreen = ({ navigation, route }) => {
       Alert.alert("Lỗi", "Không có sản phẩm nào để đặt hàng.");
       return;
     }
-
     const buyerId = await getUserId();
     if (!buyerId) {
-      Alert.alert("Lỗi", "Không thể xác thực người dùng. Vui lòng đăng nhập lại.");
+      Alert.alert(
+        "Lỗi",
+        "Không thể xác thực người dùng. Vui lòng đăng nhập lại."
+      );
       navigation.replace("Login");
       return;
     }
-
     let sellerId = null;
     if (products.length > 0) {
       sellerId = products[0].sellerId;
     }
-    
     if (!sellerId) {
       Alert.alert("Lỗi", "Không thể xác định người bán. Vui lòng thử lại.");
       return;
     }
 
-    const invalidProducts = products.filter(item => !item.productId || !item.quantity || item.quantity <= 0);
+    const invalidProducts = products.filter(
+      (item) => !item.productId || !item.quantity || item.quantity <= 0
+    );
     if (invalidProducts.length > 0) {
       Alert.alert("Lỗi", "Dữ liệu sản phẩm không hợp lệ. Vui lòng thử lại.");
       return;
     }
-
     const orderData = {
       buyerId: parseInt(buyerId),
       sellerId: parseInt(sellerId),
       addressId: selectedDisplayAddress.addressId,
+      PromotionId: appliedVoucher ? appliedVoucher.promotionId : null,
       discountAmount: discountAmount,
       paymentMethod: paymentMethod,
       orderDetails: products.map((item) => ({
@@ -167,22 +191,42 @@ const CheckoutScreen = ({ navigation, route }) => {
         snapshotPrice: item.price,
       })),
     };
-
     console.log("Sending order data:", orderData);
     setIsPlacingOrder(true);
     try {
+      if (paymentMethod === 'card') {
+        // Gọi backend tạo order PayPal
+        const response = await fetch('https://1093-118-71-92-115.ngrok-free.app/api/PayPal/create-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            amount: totalAmount,
+            currency: 'USD',
+            returnUrl: 'https://example.com/paypal-success',
+            cancelUrl: 'https://example.com/paypal-cancel'
+          })
+        });
+        const data = await response.json();
+        setPaypalUrl(data.approvalLink);
+        setPaypalOrderId(data.orderId);
+        setShowPaypalWebView(true);
+        setIsPlacingOrder(false);
+        return;
+      }
       const result = await createOrder(orderData);
       if (result) {
         // Chỉ xóa cart items nếu không phải là mua ngay
         const isBuyNow = route.params?.isBuyNow;
         if (!isBuyNow) {
-          const purchasedCartIds = products.map(p => p.id);
+          const purchasedCartIds = products.map((p) => p.id);
           await deleteMultipleCartItems(purchasedCartIds);
         }
-
+        if(appliedVoucher){
+           await decreaseVoucherQuantity(appliedVoucher.promotionId);
+        }
         Alert.alert(
-          "Thành công", 
-          `Đơn hàng của bạn đã được tạo thành công!\nMã đơn hàng: ${result.orderId}`, 
+          "Thành công",
+          `Đơn hàng của bạn đã được tạo thành công!\nMã đơn hàng: ${result.orderId}`,
           [
             {
               text: "Xem đơn hàng",
@@ -248,7 +292,7 @@ const CheckoutScreen = ({ navigation, route }) => {
                   {selectedDisplayAddress.phoneNumber}
                 </Text>
                 <Text style={styles.infoText}>
-                  {selectedDisplayAddress.addressLine}, {" "}
+                  {selectedDisplayAddress.addressLine},{" "}
                   {selectedDisplayAddress.city}
                 </Text>
               </>
@@ -268,7 +312,10 @@ const CheckoutScreen = ({ navigation, route }) => {
             </View>
             {appliedVoucher ? (
               <View style={styles.appliedVoucherChip}>
-                <Text style={styles.appliedVoucherText}>5% Discount</Text>
+                <Text style={styles.appliedVoucherText}>
+                  Giảm {appliedVoucher.discountPercent}% ({appliedVoucher.title}
+                  )
+                </Text>
                 <TouchableOpacity onPress={handleRemoveVoucher}>
                   <Ionicons
                     name="close-circle"
@@ -281,7 +328,7 @@ const CheckoutScreen = ({ navigation, route }) => {
             ) : (
               <TouchableOpacity
                 style={styles.addVoucherButton}
-                onPress={() => setVoucherModalVisible(true)}
+                onPress={openVoucherModal}
               >
                 <Text style={styles.addVoucherButtonText}>Thêm Voucher</Text>
               </TouchableOpacity>
@@ -292,7 +339,9 @@ const CheckoutScreen = ({ navigation, route }) => {
             <View key={item.id} style={styles.productItem}>
               <Image source={{ uri: item.image }} style={styles.productImage} />
               <View style={styles.productInfo}>
-                <Text style={styles.productName}>{item.title || item.name}</Text>
+                <Text style={styles.productName}>
+                  {item.title || item.name}
+                </Text>
                 <Text style={styles.productPrice}>
                   {item.price.toLocaleString("vi-VN")}đ
                 </Text>
@@ -309,20 +358,42 @@ const CheckoutScreen = ({ navigation, route }) => {
             <Text style={styles.sectionTitle}>Phương thức thanh toán</Text>
           </View>
           <View style={styles.paymentMethodContainer}>
-            <TouchableOpacity 
-              style={[styles.paymentMethodButton, paymentMethod === 'cod' && styles.paymentMethodButtonSelected]}
-              onPress={() => setPaymentMethod('cod')}
+            <TouchableOpacity
+              style={[
+                styles.paymentMethodButton,
+                paymentMethod === "cod" && styles.paymentMethodButtonSelected,
+              ]}
+              onPress={() => setPaymentMethod("cod")}
             >
-              <Text style={[styles.paymentMethodButtonText, paymentMethod === 'cod' && styles.paymentMethodButtonTextSelected]}>COD</Text>
+              <Text
+                style={[
+                  styles.paymentMethodButtonText,
+                  paymentMethod === "cod" &&
+                    styles.paymentMethodButtonTextSelected,
+                ]}
+              >
+                COD
+              </Text>
             </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.paymentMethodButton, paymentMethod === 'card' && styles.paymentMethodButtonSelected]}
+            <TouchableOpacity
+              style={[
+                styles.paymentMethodButton,
+                paymentMethod === "card" && styles.paymentMethodButtonSelected,
+              ]}
               onPress={() => {
-                setPaymentMethod('card');
+                setPaymentMethod("card");
                 setPaymentModalVisible(true);
               }}
             >
-              <Text style={[styles.paymentMethodButtonText, paymentMethod === 'card' && styles.paymentMethodButtonTextSelected]}>Card</Text>
+              <Text
+                style={[
+                  styles.paymentMethodButtonText,
+                  paymentMethod === "card" &&
+                    styles.paymentMethodButtonTextSelected,
+                ]}
+              >
+                Card
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -331,17 +402,22 @@ const CheckoutScreen = ({ navigation, route }) => {
       <View style={styles.footer}>
         <View>
           {appliedVoucher && (
-             <Text style={styles.discountText}>Giảm giá: -{discountAmount.toLocaleString("vi-VN")}đ</Text>
+            <Text style={styles.discountText}>
+              Giảm giá: -{discountAmount.toLocaleString("vi-VN")}đ
+            </Text>
           )}
           <View style={styles.totalContainer}>
-             <Text style={styles.totalText}>Tổng cộng:</Text>
-             <Text style={styles.totalAmount}>
-                {totalAmount.toLocaleString("vi-VN")}đ
-             </Text>
+            <Text style={styles.totalText}>Tổng cộng:</Text>
+            <Text style={styles.totalAmount}>
+              {totalAmount.toLocaleString("vi-VN")}đ
+            </Text>
           </View>
         </View>
         <TouchableOpacity
-          style={[styles.checkoutButton, isPlacingOrder && styles.checkoutButtonDisabled]}
+          style={[
+            styles.checkoutButton,
+            isPlacingOrder && styles.checkoutButtonDisabled,
+          ]}
           onPress={handlePlaceOrder}
           disabled={isPlacingOrder}
         >
@@ -354,50 +430,57 @@ const CheckoutScreen = ({ navigation, route }) => {
       </View>
 
       <Modal
-        animationType="slide"
-        transparent={true}
-        visible={isVoucherModalVisible}
-        onRequestClose={() => setVoucherModalVisible(false)}
-      >
-        <View style={styles.modalBackground}>
-          <View style={styles.modalContainer}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Vouchers</Text>
-              <TouchableOpacity onPress={() => setVoucherModalVisible(false)}>
-                <Ionicons name="close" size={24} color="#333" />
-              </TouchableOpacity>
+  animationType="slide"
+  transparent={true}
+  visible={isVoucherModalVisible}
+  onRequestClose={() => setVoucherModalVisible(false)}
+>
+  <View style={styles.modalBackground}>
+    <View style={styles.modalContainer}>
+      <View style={styles.modalHeader}>
+        <Text style={styles.modalTitle}>Vouchers</Text>
+        <TouchableOpacity onPress={() => setVoucherModalVisible(false)}>
+          <Ionicons name="close" size={24} color="#333" />
+        </TouchableOpacity>
+      </View>
+      <ScrollView style={styles.modalContent}>
+        {isVoucherLoading ? (
+          <Text style={{ textAlign: "center", color: "#888" }}>Đang tải voucher...</Text>
+        ) : vouchers.length === 0 ? (
+          <Text style={{ textAlign: "center", color: "#888" }}>Không có voucher phù hợp</Text>
+        ) : (
+          vouchers.map((voucher) => (
+            <View key={voucher.promotionId} style={styles.voucherItem}>
+              <View style={styles.voucherLeft}>
+                <Ionicons name="pricetag" size={30} color="#323660" />
+              </View>
+              <View style={styles.voucherCenter}>
+                <Text style={styles.voucherName}>{voucher.title}</Text>
+                <Text style={styles.voucherDescription}>
+                  Giảm {voucher.discountPercent}% cho đơn từ:{voucher.minOrderValue}đ
+                </Text>
+                <Text style={styles.voucherExpiry}>
+                  Áp dụng đến {formatDate(voucher.endDate)}
+                </Text>
+                <Text style={styles.voucherDescription}>
+                </Text>
+              </View>
+              <View style={styles.voucherRight}>
+                <TouchableOpacity
+                  style={styles.applyButton}
+                  onPress={() => handleApplyVoucher(voucher)}
+                >
+                  <Text style={styles.applyButtonText}>Thêm</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={styles.voucherRightClip}></View>
             </View>
-            <ScrollView style={styles.modalContent}>
-              {vouchers.map((voucher) => (
-                <View key={voucher.id} style={styles.voucherItem}>
-                  <View style={styles.voucherLeft}>
-                    <View style={styles.voucherClip}></View>
-                    <Ionicons name={voucher.icon} size={30} color="#323660" />
-                  </View>
-                  <View style={styles.voucherCenter}>
-                    <Text style={styles.voucherName}>{voucher.name}</Text>
-                    <Text style={styles.voucherDescription}>
-                      {voucher.description}
-                    </Text>
-                  </View>
-                  <View style={styles.voucherRight}>
-                    <Text style={styles.voucherExpiry}>
-                      Áp dụng đến {voucher.expiryDate}
-                    </Text>
-                    <TouchableOpacity
-                      style={styles.applyButton}
-                      onPress={() => handleApplyVoucher(voucher)}
-                    >
-                      <Text style={styles.applyButtonText}>Thêm</Text>
-                    </TouchableOpacity>
-                  </View>
-                  <View style={styles.voucherRightClip}></View>
-                </View>
-              ))}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
+          ))
+        )}
+      </ScrollView>
+    </View>
+  </View>
+</Modal>
 
       <Modal
         animationType="slide"
@@ -467,6 +550,94 @@ const CheckoutScreen = ({ navigation, route }) => {
           </View>
         </View>
       </Modal>
+
+      {showPaypalWebView && paypalUrl && (
+        <Modal visible={showPaypalWebView} animationType="slide">
+          <WebView
+            source={{ uri: paypalUrl }}
+            onNavigationStateChange={async (navState) => {
+              if (navState.url.startsWith('https://example.com/paypal-success')) {
+                setShowPaypalWebView(false);
+                // Gọi backend capture order
+                try {
+                  const response = await fetch('https://1093-118-71-92-115.ngrok-free.app/api/PayPal/capture-order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ OrderId: paypalOrderId })
+                  });
+                  let text = await response.text();
+                  let data = null;
+                  try {
+                    data = JSON.parse(text);
+                  } catch (err) {
+                    console.error("Phản hồi không hợp lệ từ máy chủ:", text);
+                    Alert.alert("Lỗi", "Phản hồi không hợp lệ từ máy chủ:\n" + text);
+                    return;
+                  }
+                    if (!response.ok) {
+                      Alert.alert('Lỗi xác nhận PayPal', `Mã lỗi: ${response.status}\n${JSON.stringify(data)}`);
+                      return;
+                    }
+                  if (data.status === 'COMPLETED' || (data.result && data.result.status === 'COMPLETED')) {
+                    // Nếu thanh toán thành công, tạo đơn hàng trong hệ thống
+                    try {
+                      const buyerId = await getUserId();
+                      let sellerId = null;
+                      if (products.length > 0) {
+                        sellerId = products[0].sellerId;
+                      }
+                      const orderData = {
+                        buyerId: parseInt(buyerId),
+                        sellerId: parseInt(sellerId),
+                        addressId: selectedDisplayAddress.addressId,
+                        discountAmount: discountAmount,
+                        PromotionId: appliedVoucher ? appliedVoucher.promotionId : null,
+                        paymentMethod: 'card',
+                        orderDetails: products.map((item) => ({
+                          productId: item.productId,
+                          quantity: item.quantity,
+                          snapshotPrice: item.price,
+                        })),
+                      };
+                      const result = await createOrder(orderData);
+                      if (result) {
+                        Alert.alert('Thanh toán thành công!', 'Đơn hàng của bạn đã được thanh toán qua PayPal và lưu vào hệ thống.', [
+                          {
+                            text: 'Xem đơn hàng',
+                            onPress: () => {
+                              navigation.navigate('Main', {
+                                screen: 'Orders',
+                                params: {
+                                  screen: 'OrderDetails',
+                                  params: { orderId: result.orderId },
+                                },
+                              });
+                            },
+                          },
+                          {
+                            text: 'Về trang chủ',
+                            onPress: () => navigation.popToTop(),
+                          },
+                        ]);
+                      }
+                    } catch (e) {
+                      Alert.alert('Thanh toán thành công nhưng lưu đơn hàng thất bại!', e.message);
+                    }
+                  } else {
+                    Alert.alert('Thanh toán thất bại!', `Có lỗi xảy ra khi xác nhận thanh toán.\nChi tiết: ${JSON.stringify(data)}`);
+                  }
+                } catch (e) {
+                  Alert.alert('Lỗi', `Không thể xác nhận thanh toán với PayPal.\n${e.message}`);
+                }
+              }
+              if (navState.url.startsWith('https://example.com/paypal-cancel')) {
+                setShowPaypalWebView(false);
+                Alert.alert('Bạn đã hủy thanh toán PayPal.');
+              }
+            }}
+          />
+        </Modal>
+      )}
     </SafeAreaView>
   );
 };
@@ -585,30 +756,30 @@ const styles = StyleSheet.create({
     color: "#333",
   },
   paymentMethodContainer: {
-    flexDirection: 'row',
-    justifyContent: 'flex-start',
+    flexDirection: "row",
+    justifyContent: "flex-start",
     marginTop: 8,
   },
   paymentMethodButton: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: "#ddd",
     borderRadius: 8,
     paddingHorizontal: 24,
     paddingVertical: 12,
     marginRight: 12,
-    backgroundColor: '#f8f8f8'
+    backgroundColor: "#f8f8f8",
   },
   paymentMethodButtonSelected: {
-    backgroundColor: '#323660',
-    borderColor: '#323660',
+    backgroundColor: "#323660",
+    borderColor: "#323660",
   },
   paymentMethodButtonText: {
     fontSize: 15,
     color: "#333",
-    fontWeight: '500'
+    fontWeight: "500",
   },
   paymentMethodButtonTextSelected: {
-    color: '#fff',
+    color: "#fff",
   },
   footer: {
     flexDirection: "row",
@@ -632,8 +803,8 @@ const styles = StyleSheet.create({
   },
   discountText: {
     fontSize: 14,
-    color: 'green',
-    alignSelf: 'flex-end',
+    color: "green",
+    alignSelf: "flex-end",
     marginBottom: 2,
   },
   totalText: {

@@ -42,6 +42,9 @@ import ProductByCategory from "./src/screens/ProductByCategory";
 import SearchProductsScreen from "./src/screens/SearchProductsScreen";
 import CreatePostScreen from "./src/screens/CreatePostScreen";
 import SellerProfileScreen from "./src/screens/SellerProfileScreen";
+import NotifyScreen from "./src/screens/NotifyScreen";
+import SellerOrdersScreen from "./src/screens/SellerOrdersScreen";
+import SellerOrderDetailScreen from "./src/screens/SellerOrderDetailScreen";
 
 // import SettingsScreen from './src/screens/Settings/SettingsScreen';
 
@@ -115,6 +118,9 @@ function MainTabs() {
             case "Post":
               iconName = focused ? "reader" : "reader-outline";
               break;
+            case "Notify":
+              iconName = focused ? "notifications" : "notifications-outline";
+              break;
             case "Orders":
               iconName = focused ? "cart" : "cart-outline";
               break;
@@ -150,6 +156,7 @@ function MainTabs() {
       <Tab.Screen name="Home" component={HomeScreen} />
       <Tab.Screen name="Wishlist" component={WishlistScreen} />
       <Tab.Screen name="Post" component={PostsScreen} />
+      <Tab.Screen name="Notify" component={NotifyScreen} />
       <Tab.Screen name="Orders" component={OrdersStackScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
@@ -201,6 +208,8 @@ export default function App() {
         <Stack.Screen name="EditProfile" component={EditProfileScreen} />
         <Stack.Screen name="SearchProducts" component={SearchProductsScreen} />
         <Stack.Screen name="RateProducts" component={RateProductsScreen} />
+        <Stack.Screen name="SellerOrders" component={SellerOrdersScreen} />
+        <Stack.Screen name="SellerOrderDetail" component={SellerOrderDetailScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

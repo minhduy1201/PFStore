@@ -7,7 +7,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
-  FlatList, // Use FlatList for rendering lists efficiently
+  FlatList,
   Modal,
   TextInput,
   Keyboard,
@@ -34,11 +34,13 @@ const ManageOrdersScreen = ({ navigation }) => {
           setLoading(true);
           const userId = await AsyncStorage.getItem('userId');
           if (userId) {
+            console.log("Fetching orders for userId:", userId);
             const fetchedOrders = await getOrdersByBuyer(userId);
             if (fetchedOrders) {
               const userIdInt = parseInt(userId);
               const formattedOrders = fetchedOrders.map(order => {
-                const allProductsReviewed = order.orderDetails.every(detail =>
+                const details = Array.isArray(order.orderDetails) ? order.orderDetails : [];
+                const allProductsReviewed = details.every(detail =>
                   detail.product.ratings.some(rating => rating.userId === userIdInt)
                 );
 
@@ -46,7 +48,7 @@ const ManageOrdersScreen = ({ navigation }) => {
                   id: order.orderId, // Use orderId as the key
                   orderId: `#${order.orderId}`,
                   rawOrderId: order.orderId,
-                  products: order.orderDetails.map(detail => ({
+                  products: details.map(detail => ({
                     productId: detail.product.productId,
                     name: detail.product.title,
                     image: detail.product.productImages && detail.product.productImages.length > 0

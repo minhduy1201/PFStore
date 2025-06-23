@@ -12,6 +12,43 @@ export const createOrder = async (orderData) => {
   }
 };
 
+//chấp nhận đơn hàng
+export const acceptOrder = async (orderId) => {
+  try {
+    if (!orderId) {
+      console.warn("ID đơn hàng không hợp lệ để chấp nhận.");
+      throw new Error("ID đơn hàng không hợp lệ.");
+    }
+    // Gọi API PUT: /api/Order/{orderId}/accept
+    const res = await api.put(`/Order/${orderId}/accept`);
+    return res.data; // Trả về thông báo thành công từ backend
+  } catch (error) {
+    console.error(
+      `Lỗi khi chấp nhận đơn hàng #${orderId}:`,
+      error.response?.data || error.message
+    );
+    throw error; // Ném lỗi để component gọi có thể xử lý
+  }
+};
+
+// ---  Từ chối Đơn hàng ---
+export const rejectOrder = async (orderId) => {
+  try {
+    if (!orderId) {
+      console.warn("ID đơn hàng không hợp lệ để từ chối.");
+      throw new Error("ID đơn hàng không hợp lệ.");
+    }
+    // Gọi API PUT: /api/Order/{orderId}/reject
+    const res = await api.put(`/Order/${orderId}/reject`);
+    return res.data; // Trả về thông báo thành công từ backend
+  } catch (error) {
+    console.error(
+      `Lỗi khi từ chối đơn hàng #${orderId}:`,
+      error.response?.data || error.message
+    );
+    throw error; // Ném lỗi để component gọi có thể xử lý
+  }
+};
 // Hàm lấy chi tiết đơn hàng theo ID
 export const getOrderById = async (orderId) => {
   try {
@@ -34,8 +71,8 @@ export const getOrdersByBuyer = async (buyerId) => {
   }
 };
 
-// Hàm lấy danh sách đơn hàng của người bán
-export const getOrdersBySeller = async (sellerId) => {
+// Lấy danh sách đơn hàng của người bán
+export const getSellerOrders = async (sellerId) => {
   try {
     const response = await api.get(`/Order/seller/${sellerId}`);
     return response.data;
@@ -45,10 +82,10 @@ export const getOrdersBySeller = async (sellerId) => {
   }
 };
 
-// Hàm cập nhật trạng thái đơn hàng
-export const updateOrderStatus = async (orderId, statusData) => {
+// Cập nhật trạng thái đơn hàng
+export const updateOrderStatus = async (orderId, status) => {
   try {
-    const response = await api.put(`/Order/${orderId}`, statusData);
+    const response = await api.put(`/Order/${orderId}/status`, { status });
     return response.data;
   } catch (error) {
     handleApiError(error, "Không thể cập nhật trạng thái đơn hàng. Vui lòng thử lại.");
@@ -66,3 +103,15 @@ export const cancelOrder = async (orderId) => {
     return null;
   }
 }; 
+
+// lấy lịch sử giao dịch của người dùng
+export const getTransactionHistoryByUser = async (userId) => {
+  try {
+    const response = await api.get(`/orders/history/${userId}`); 
+    return response.data;
+  } catch (error) {
+    console.error("Lỗi khi lấy lịch sử giao dịch:", error);
+    throw error;
+  }
+};
+

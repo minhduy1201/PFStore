@@ -160,9 +160,9 @@ export default function HomeScreen({ navigation }) {
               }
               activeOpacity={0.85}
             >
-              {prod.productImages && prod.productImages.length > 0 ? (
+              {prod.images && prod.images.length > 0 ? (
                 <Image
-                  source={{ uri: prod.productImages[0].imageUrl }}
+                  source={{ uri: prod.images[0] }}
                   style={styles.productImage}
                   resizeMode="cover"
                 />
