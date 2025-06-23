@@ -9,14 +9,19 @@ import {
   Image,
   Switch,
   Alert,
+  ActivityIndicator, // Đã xóa ActivityIndicator
 } from "react-native";
 import { Entypo } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import DropDownPicker from "react-native-dropdown-picker";
-import { GetCategories } from "../servers/ProductService";
+import {
+  GetCategories,
+  CreatePost,
+  getProductById,
+  updatePost,
+} from "../servers/ProductService";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getUserAddresses } from "../servers/AddressService";
-import { CreatePost } from "../servers/ProductService";
 
 export const BRANDS = [
   { label: "Nike", value: "Nike" },
@@ -37,35 +42,100 @@ const CONDITIONS = [
   { label: "Hư hỏng", value: "broken" },
 ];
 
-const CreatePostScreen = ({ navigation }) => {
+const CreatePostScreen = ({ navigation, route }) => {
+  const productId = route.params?.productId;
+  // console.log("Id là", productId);
+
+  // --- States cho Form ---
   const [images, setImages] = useState([]);
   const [title, setTitle] = useState("");
   const [price, setPrice] = useState("");
   const [salePrice, setSalePrice] = useState("");
   const [isNegotiable, setIsNegotiable] = useState(false);
-  const [brand, setBrand] = useState("");
-  const [condition, setCondition] = useState("");
+  const [brand, setBrand] = useState(null);
+  const [condition, setCondition] = useState(null);
   const [description, setDescription] = useState("");
-  const [openCondition, setOpenCondition] = useState(false);
-  const [categories, setCategories] = useState([]);
-  const [openCategory, setOpenCategory] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
-
-  const [attributes, setAttributes] = useState([]);
-  const [attributeValues, setAttributeValues] = useState({});
-  const [openSelects, setOpenSelects] = useState({});
-  const [openBrand, setOpenBrand] = useState(false);
-
-  const [addresses, setAddresses] = useState([]);
+  const [attributeValues, setAttributeValues] = useState({}); // Lưu trữ giá trị của các thuộc tính
   const [selectedAddressId, setSelectedAddressId] = useState(null);
 
+  // --- States cho DropDownPickers ---
+  const [openCondition, setOpenCondition] = useState(false);
+  const [openCategory, setOpenCategory] = useState(false);
+  const [openSelects, setOpenSelects] = useState({}); // Dành cho các DropDownPicker của attributes
+  const [openBrand, setOpenBrand] = useState(false);
+
+  // --- States cho Data và Submitting ---
+  const [categories, setCategories] = useState([]);
+  const [attributes, setAttributes] = useState([]); // Attributes của danh mục đã chọn
+  const [addresses, setAddresses] = useState([]);
+  const [isSubmitting, setIsSubmitting] = useState(false); // Trạng thái khi đang gửi form
+
+  // --- Effect 1: Fetch Categories and Addresses (chỉ chạy 1 lần khi mount) ---
   useEffect(() => {
-    fetchCategories();
-    fetchAddresses();
+    async function fetchData() {
+      await fetchCategories();
+      await fetchAddresses();
+    }
+    fetchData();
   }, []);
 
+  // --- Effect 2: Fetch Product Data (chỉ chạy khi productId có) ---
   useEffect(() => {
-    if (selectedCategoryId !== null) {
+    const fetchProductDataForEdit = async () => {
+      if (productId) {
+        try {
+          const product = await getProductById(productId);
+          if (product) {
+            setTitle(product.title || "");
+            setPrice(product.price ? product.price.toString() : "");
+            setSalePrice(product.salePrice ? product.salePrice.toString() : "");
+            setBrand(product.brand || null);
+            setCondition(product.condition || null);
+            setDescription(product.description || "");
+            setSelectedCategoryId(product.categoryId);
+            setImages(product.images || []);
+
+            const initialAttributeValues = (product.attributes || []).reduce(
+              (acc, attr) => {
+                if (attr.AttributeId) {
+                  acc[attr.AttributeId] = attr.Value;
+                }
+                return acc;
+              },
+              {}
+            );
+            setAttributeValues(initialAttributeValues);
+
+            if (product.location && addresses.length > 0) {
+              const matchedAddress = addresses.find(
+                (addr) => addr.addressLine === product.location
+              );
+              if (matchedAddress) {
+                setSelectedAddressId(matchedAddress.addressId);
+              }
+            }
+          }
+        } catch (err) {
+          Alert.alert(
+            "Lỗi tải dữ liệu",
+            "Không thể tải dữ liệu sản phẩm để chỉnh sửa."
+          );
+          console.error("Error loading product data:", err);
+          navigation.goBack();
+        }
+      }
+    };
+
+    // Chỉ gọi khi có productId VÀ categories/addresses đã tải (để đảm bảo data liên quan sẵn sàng)
+    if (productId && categories.length > 0 && addresses.length > 0) {
+      fetchProductDataForEdit();
+    }
+  }, [productId, categories, addresses]); // Dependencies: productId, categories, addresses
+
+  // --- Effect 3: Update attributes when category changes ---
+  useEffect(() => {
+    if (selectedCategoryId !== null && categories.length > 0) {
       const selectedCat = categories.find(
         (c) => c.categoryId === selectedCategoryId
       );
@@ -75,11 +145,19 @@ const CreatePostScreen = ({ navigation }) => {
         (selectedCat.attributes || []).forEach((attr) => {
           defaults[attr.attributeId] = "";
         });
-        setAttributeValues(defaults);
+
+        // Nếu đang tạo mới, hoặc đang chỉnh sửa mà categoryId thay đổi, thì reset/merge attributes
+        if (!productId) {
+          setAttributeValues(defaults);
+        } else {
+          // Khi chỉnh sửa, merge các giá trị cũ với các giá trị mặc định mới
+          setAttributeValues((prev) => ({ ...defaults, ...prev }));
+        }
+
         setOpenSelects({});
       }
     }
-  }, [selectedCategoryId]);
+  }, [selectedCategoryId, categories, productId]); // Dependency: selectedCategoryId, categories, productId
 
   const fetchCategories = async () => {
     try {
@@ -104,6 +182,7 @@ const CreatePostScreen = ({ navigation }) => {
         if (defaultAddr) setSelectedAddressId(defaultAddr.addressId);
       }
     } catch (err) {
+      console.error("Error fetching addresses:", err);
       setAddresses([]);
     }
   };
@@ -116,30 +195,67 @@ const CreatePostScreen = ({ navigation }) => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       quality: 0.8,
+      allowsMultipleSelection: true,
+      selectionLimit: 5 - images.length,
     });
     if (!result.canceled) {
-      setImages([...images, result.assets[0].uri]);
+      const newUris = result.assets.map((asset) => asset.uri);
+      setImages([...images, ...newUris]);
     }
   };
 
+  const removeImage = (index) => {
+    Alert.alert("Xác nhận xóa", "Bạn có muốn xóa ảnh này không?", [
+      { text: "Hủy", style: "cancel" },
+      {
+        text: "Xóa",
+        onPress: () => {
+          const newImages = [...images];
+          newImages.splice(index, 1);
+          setImages(newImages);
+        },
+      },
+    ]);
+  };
+
   const handleSubmit = async () => {
-    if (!title || !price || !selectedCategoryId) {
+    if (!title || !price || !selectedCategoryId || images.length === 0) {
       Alert.alert(
         "Thiếu thông tin",
-        "Vui lòng điền đầy đủ các trường bắt buộc."
+        "Vui lòng điền đầy đủ tiêu đề, giá, chọn danh mục và ít nhất một ảnh."
       );
       return;
     }
+
+    if (isSubmitting) return;
+
+    setIsSubmitting(true);
+
     try {
       const userId = await AsyncStorage.getItem("userId");
+      const currentPrice = parseFloat(price);
+      const currentSalePrice = parseFloat(salePrice || 0);
+
+      if (isNaN(currentPrice) || currentPrice <= 0) {
+        Alert.alert("Lỗi", "Giá sản phẩm phải là số dương.");
+        return;
+      }
+      if (isNaN(currentSalePrice) || currentSalePrice < 0) {
+        Alert.alert("Lỗi", "Giá sale phải là số không âm.");
+        return;
+      }
+      if (currentSalePrice > currentPrice) {
+        Alert.alert("Lỗi", "Giá sale không thể lớn hơn giá gốc.");
+        return;
+      }
 
       const formData = new FormData();
       formData.append("Title", title);
       formData.append("Description", description);
-      formData.append("Price", parseFloat(price));
-      formData.append("SalePrice", parseFloat(salePrice || 0));
-      formData.append("Brand", brand);
-      formData.append("Condition", condition);
+      formData.append("Price", currentPrice);
+      formData.append("SalePrice", currentSalePrice);
+      formData.append("Brand", brand || "");
+      formData.append("Condition", condition || "");
       formData.append("CategoryId", selectedCategoryId);
       formData.append("SellerId", Number(userId));
 
@@ -151,77 +267,104 @@ const CreatePostScreen = ({ navigation }) => {
       const attributeList = Object.entries(attributeValues).map(
         ([key, value]) => ({
           attributeId: Number(key),
-          value,
+          value: String(value),
         })
       );
-      formData.append("ProductAttributes", JSON.stringify(attributeList));
 
-      for (let i = 0; i < images.length; i++) {
-        const uri = images[i];
-        const filename = uri.split("/").pop();
-        const match = /\.(\w+)$/.exec(filename ?? "");
-        const type = match ? `image/${match[1]}` : `image`;
+      if (productId) {
+        // Chế độ chỉnh sửa
+        const payload = {
+          productId: productId,
+          title: title,
+          description: description,
+          price: currentPrice,
+          salePrice: currentSalePrice,
+          brand: brand,
+          condition: condition,
+          categoryId: selectedCategoryId,
+          location: selectedAddress?.addressLine ?? "",
+          productAttributes: attributeList,
+        };
 
-        formData.append("Images", {
-          uri,
-          name: filename,
-          type,
-        });
+        const response = await updatePost(productId, payload);
+        Alert.alert("Thành công", response.message);
+        navigation.goBack();
+      } else {
+        // Chế độ tạo mới
+        for (let i = 0; i < images.length; i++) {
+          const uri = images[i];
+          const filename = uri.split("/").pop();
+          const match = /\.(\w+)$/.exec(filename ?? "");
+          const type = match ? `image/${match[1]}` : `image`;
+
+          formData.append("Images", {
+            uri,
+            name: filename,
+            type,
+          });
+        }
+        formData.append("ProductAttributes", JSON.stringify(attributeList));
+
+        await CreatePost(formData);
+        Alert.alert("Thành công", "Sản phẩm đã được đăng!");
+        navigation.goBack();
       }
-
-      await CreatePost(formData);
-      Alert.alert("Thành công", "Sản phẩm đã được đăng!");
-      navigation.goBack();
     } catch (err) {
-      console.error(err);
-      Alert.alert("Lỗi", "Không thể đăng sản phẩm. Vui lòng thử lại.");
+      console.error("Lỗi khi xử lý bài đăng:", err);
+      Alert.alert("Lỗi", "Có lỗi xảy ra khi xử lý sản phẩm.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
+  // Không có phần loading overlay nữa
   return (
     <ScrollView style={styles.container}>
-       <Text style={styles.label}>Hình ảnh</Text>
+      <Text style={styles.header}>
+        {productId ? "Chỉnh sửa sản phẩm" : "Đăng sản phẩm mới"}
+      </Text>
+      <Text style={styles.label}>Ảnh sản phẩm (tối đa 5 ảnh)</Text>
       <View style={styles.imageRow}>
         {images.map((uri, idx) => (
-          <View key={idx} style={styles.imagePreviewWrapper}>
+          <TouchableOpacity key={idx} onPress={() => removeImage(idx)}>
             <Image source={{ uri }} style={styles.imagePreview} />
-            <TouchableOpacity
-              style={styles.deleteImageBtn}
-              onPress={() => setImages(images.filter((_, i) => i !== idx))}
-            >
-              <Entypo name="cross" size={18} color="#fff" />
-            </TouchableOpacity>
-          </View>
+            <View style={styles.removeImageIcon}>
+              <Entypo name="circle-with-cross" size={18} color="red" />
+            </View>
+          </TouchableOpacity>
         ))}
         {images.length < 5 && (
           <TouchableOpacity style={styles.imageAdd} onPress={pickImage}>
-            <Entypo name="plus" size={28} color="#323660" />
-            {/* <Text style={styles.imageAddText}>Thêm ảnh</Text> */}
+            <Entypo name="plus" size={24} color="#666" />
           </TouchableOpacity>
         )}
-        <View>
-        <Text style={{ color: "#888", fontSize: 13, marginBottom: 4 }}>
-          Tải lên hình ảnh có kích thước lớn hơn 750px x 450px. Số lượng tối đa 5
-          ảnh. Dung lượng mỗi ảnh tối đa 134MB.
-        </Text>
-      </View>
       </View>
 
-      <Text style={styles.label}>Tiêu đề</Text>
-      <TextInput style={styles.input} value={title} onChangeText={setTitle} />
+      <Text style={styles.label}>
+        Tiêu đề <Text style={styles.required}>*</Text>
+      </Text>
+      <TextInput
+        style={styles.input}
+        value={title}
+        onChangeText={setTitle}
+        placeholder="Nhập tiêu đề sản phẩm"
+      />
 
-      <Text style={styles.label}>Danh mục</Text>
+      <Text style={styles.label}>
+        Danh mục <Text style={styles.required}>*</Text>
+      </Text>
       <DropDownPicker
         open={openCategory}
         value={selectedCategoryId}
         items={categories.map((c) => ({ label: c.name, value: c.categoryId }))}
         setOpen={setOpenCategory}
         setValue={setSelectedCategoryId}
-        setItems={() => {}}
+        setItems={setCategories}
         style={styles.input}
         placeholder="Chọn danh mục"
         listMode="MODAL"
-        zIndex={2000}
+        zIndex={3000}
+        dropDownContainerStyle={styles.dropdownContainer}
       />
 
       {attributes.map((attr) => {
@@ -251,10 +394,11 @@ const CreatePostScreen = ({ navigation }) => {
                   }))
                 }
                 setItems={() => {}}
-                placeholder={attr.description}
+                placeholder={attr.description || `Chọn ${attr.name}`}
                 style={styles.input}
                 listMode="MODAL"
-                zIndex={1000 - attr.attributeId}
+                zIndex={2000 - attr.attributeId}
+                dropDownContainerStyle={styles.dropdownContainer}
               />
             </View>
           );
@@ -266,7 +410,7 @@ const CreatePostScreen = ({ navigation }) => {
                 style={styles.input}
                 value={value}
                 keyboardType={attr.type === "number" ? "numeric" : "default"}
-                placeholder={attr.description}
+                placeholder={attr.description || `Nhập ${attr.name}`}
                 onChangeText={(text) =>
                   setAttributeValues((prev) => ({
                     ...prev,
@@ -279,21 +423,35 @@ const CreatePostScreen = ({ navigation }) => {
         }
       })}
 
-      <Text style={styles.label}>Giá</Text>
+      <Text style={styles.label}>
+        Giá <Text style={styles.required}>*</Text>
+      </Text>
       <TextInput
         style={styles.input}
         value={price}
         onChangeText={setPrice}
         keyboardType="numeric"
+        placeholder="Nhập giá (ví dụ: 100000)"
       />
 
-      <Text style={styles.label}>Giá sale</Text>
+      <Text style={styles.label}>Giá sale (không bắt buộc)</Text>
       <TextInput
         style={styles.input}
         value={salePrice}
         onChangeText={setSalePrice}
         keyboardType="numeric"
+        placeholder="Nhập giá sale nếu có (ví dụ: 80000)"
       />
+
+      {/* <View style={styles.switchRow}>
+        <Text style={styles.label}>Có thể thương lượng</Text>
+        <Switch
+          onValueChange={setIsNegotiable}
+          value={isNegotiable}
+          trackColor={{ false: "#767577", true: "#81b0ff" }}
+          thumbColor={isNegotiable ? "#f5dd4b" : "#f4f3f4"}
+        />
+      </View> */}
 
       <Text style={styles.label}>Thương hiệu</Text>
       <DropDownPicker
@@ -302,11 +460,12 @@ const CreatePostScreen = ({ navigation }) => {
         items={BRANDS}
         setOpen={setOpenBrand}
         setValue={setBrand}
-        setItems={() => {}}
+        setItems={BRANDS}
         style={styles.input}
         placeholder="Chọn thương hiệu"
         listMode="MODAL"
         zIndex={900}
+        dropDownContainerStyle={styles.dropdownContainer}
       />
 
       <Text style={styles.label}>Tình trạng</Text>
@@ -316,19 +475,21 @@ const CreatePostScreen = ({ navigation }) => {
         items={CONDITIONS}
         setOpen={setOpenCondition}
         setValue={setCondition}
-        setItems={() => {}}
+        setItems={CONDITIONS}
         style={styles.input}
         placeholder="Chọn tình trạng"
         listMode="MODAL"
         zIndex={800}
+        dropDownContainerStyle={styles.dropdownContainer}
       />
 
       <Text style={styles.label}>Mô tả chi tiết</Text>
       <TextInput
-        style={[styles.input, { height: 100 }]}
+        style={[styles.input, { height: 100, textAlignVertical: "top" }]}
         multiline
         value={description}
         onChangeText={setDescription}
+        placeholder="Mô tả chi tiết sản phẩm của bạn..."
       />
 
       <Text style={styles.label}>Chọn địa chỉ giao hàng</Text>
@@ -357,11 +518,23 @@ const CreatePostScreen = ({ navigation }) => {
         <TouchableOpacity
           style={styles.cancelBtn}
           onPress={() => navigation.goBack()}
+          disabled={isSubmitting}
         >
           <Text style={styles.cancelText}>Hủy</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit}>
-          <Text style={styles.submitText}>Đăng</Text>
+        <TouchableOpacity
+          style={styles.submitBtn}
+          onPress={handleSubmit}
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? (
+            // ActivityIndicator chỉ hiển thị khi đang gửi form
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.submitText}>
+              {productId ? "Cập nhật" : "Đăng"}
+            </Text>
+          )}
         </TouchableOpacity>
       </View>
     </ScrollView>
@@ -369,147 +542,127 @@ const CreatePostScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 24,
-    backgroundColor: "#F7F9FC",
-    paddingTop: 40,
-    paddingBottom: 40,
-  },
-  header: {
-    fontSize: 20,
-    fontWeight: "700",
-    marginBottom: 24,
-    color: "#1C1C1E",
-  },
+  container: { flex: 1, padding: 20, backgroundColor: "#fff" },
+  header: { fontSize: 22, fontWeight: "bold", marginBottom: 20, color: "#333" },
   imageRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    marginBottom: 12,
     gap: 10,
+    marginBottom: 10,
   },
-  imagePreviewWrapper: {
-    position: "relative",
-    marginRight: 8,
-    marginBottom: 8,
-  },
-  imagePreview: {
-    width: 80,
-    height: 80,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#e0e0e0",
-  },
-  deleteImageBtn: {
-    position: "absolute",
-    top: -8,
-    right: -8,
-    backgroundColor: "#e63946",
-    borderRadius: 12,
-    padding: 2,
-    zIndex: 2,
-    elevation: 2,
-  },
+  imagePreview: { width: 70, height: 70, borderRadius: 8, resizeMode: "cover" },
   imageAdd: {
-    width: 80,
-    height: 80,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: "#323660",
+    width: 70,
+    height: 70,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#ccc",
     justifyContent: "center",
     alignItems: "center",
-    flexDirection: "column",
-    marginRight: 8,
-    marginBottom: 8,
-    backgroundColor: "#E5EBFC",
+    borderStyle: "dashed",
   },
-  imageAddText: {
-    fontSize: 12,
-    color: "#323660",
-    marginTop: 4,
-    fontWeight: "500",
+  removeImageIcon: {
+    position: "absolute",
+    top: -5,
+    right: -5,
+    backgroundColor: "white",
+    borderRadius: 10,
   },
   label: {
-    fontWeight: "700",
-    fontSize: 15,
+    fontWeight: "600",
     marginTop: 15,
-    marginBottom: 6,
-    color: "#1E2E3D",
-    letterSpacing: 0.2,
-    textTransform: "uppercase",
-    letterSpacing: 1,
+    marginBottom: 4,
+    fontSize: 16,
+    color: "#555",
+  },
+  required: {
+    color: "red",
+    fontSize: 14,
   },
   input: {
     borderWidth: 1,
-    borderColor: "#D1D1D6",
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    fontSize: 14,
-    backgroundColor: "#FFFFFF",
+    borderColor: "#ddd",
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 0,
+    backgroundColor: "#f9f9f9",
+    fontSize: 16,
   },
-  field: {
-    marginBottom: 12,
-  },
-  rowAlign: {
+  field: { marginBottom: 10 },
+  switchRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginVertical: 12,
+    justifyContent: "space-between",
+    marginVertical: 10,
+    paddingVertical: 5,
   },
   row: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginTop: 32,
+    marginTop: 30,
+    marginBottom: 20,
   },
   cancelBtn: {
     flex: 1,
-    backgroundColor: "#F2F4F7",
-    paddingVertical: 14,
-    borderRadius: 12,
-    marginRight: 12,
+    backgroundColor: "#ccc",
+    padding: 14,
+    borderRadius: 8,
+    marginRight: 10,
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#D1D1D6",
   },
-  cancelText: {
-    fontWeight: "600",
-    color: "#1C1C1E",
-  },
+  cancelText: { fontWeight: "bold", fontSize: 16, color: "#333" },
   submitBtn: {
     flex: 1,
-    backgroundColor: "#1E2E3D",
-    paddingVertical: 14,
-    borderRadius: 12,
+    backgroundColor: "#2C3E50",
+    padding: 14,
+    borderRadius: 8,
     alignItems: "center",
+    justifyContent: "center",
   },
-  submitText: {
-    color: "#FFFFFF",
-    fontWeight: "600",
-  },
+  submitText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
   addressItem: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    padding: 15,
     marginBottom: 10,
-    borderWidth: 1,
-    borderColor: "#E0E0E0",
     flexDirection: "row",
     alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#eee",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   selectedAddress: {
-    borderColor: "#3478F6",
-    backgroundColor: "#EAF1FF",
+    borderColor: "#4472C4",
+    borderWidth: 2,
+    backgroundColor: "#e6f0ff",
   },
   addressText: {
-    fontSize: 14,
-    color: "#1C1C1E",
+    fontSize: 15,
+    color: "#333",
     flex: 1,
   },
   defaultLabel: {
     fontSize: 13,
-    color: "#3478F6",
-    fontWeight: "600",
+    color: "#4472C4",
+    fontWeight: "bold",
     marginLeft: 10,
+  },
+  // loadingOverlay: { // Đã xóa kiểu này
+  //   ...StyleSheet.absoluteFillObject,
+  //   backgroundColor: "rgba(255,255,255,0.8)",
+  //   justifyContent: "center",
+  //   alignItems: "center",
+  //   zIndex: 9999,
+  // },
+  dropdownContainer: {
+    borderColor: "#ddd",
+    borderWidth: 1,
+    borderRadius: 8,
+    backgroundColor: "#f9f9f9",
   },
 });
 

@@ -33,13 +33,24 @@ export const addCart = async (prodId, quantity) => {
   };
   try {
     const res = await api.post("/Carts", requestBody);
-    if (res.status == 200 && res.data && res.data.cartItem) {
-      return res.data.cartItem;
+    if (res.status === 200) {
+      //nếu chưa được thêm
+      if (res.data && res.data.cartItem) {
+        console.log("Sản phẩm đã được thêm vào giỏ hàng:", res.data.cartItem);
+        return {
+          success: true,
+          cartItem: res.data.cartItem,
+          message: res.data.message,
+        };
+      } else if (res.data && res.data.message) {
+        console.log("Thông báo từ giỏ hàng:", res.data.message);
+        // trường hợp sản phẩm đã có sẵn
+        return { success: false, message: res.data.message };
+      }
     }
   } catch (error) {
     console.error("Lỗi khi thêm sản phẩm vào giỏ hàng:", error);
     let errorMessage = "Đã xảy ra lỗi không xác định.";
-
     if (error.response) {
       // Lỗi từ phía server (HTTP status code không phải 2xx)
       // Lấy thông báo lỗi được gửi từ backend
@@ -73,6 +84,25 @@ export const deleteCart = async (cardId) => {
   } catch (error) {
     console.error(`Lỗi khi xóa cartId ${cardId}:`, error);
     throw error;
+  }
+};
+
+// Xóa nhiều sản phẩm khỏi giỏ hàng
+export const deleteMultipleCartItems = async (cartIds) => {
+  if (!cartIds || cartIds.length === 0) {
+    console.log("Không có sản phẩm nào để xóa.");
+    return true;
+  }
+  try {
+    const response = await api.delete("/Carts/bulk-delete", { data: cartIds });
+    if (response.status === 204) {
+      console.log("Các sản phẩm đã được xóa khỏi giỏ hàng:", cartIds);
+      return true;
+    }
+  } catch (error) {
+    console.error("Lỗi khi xóa nhiều sản phẩm khỏi giỏ hàng:", error);
+    // Có thể thêm xử lý lỗi cụ thể hơn ở đây nếu cần
+    return false;
   }
 };
 

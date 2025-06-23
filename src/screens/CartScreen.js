@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+
 import {
   View,
   Text,
@@ -12,72 +13,99 @@ import {
   Modal,
   ActivityIndicator,
 } from "react-native";
+
 import { Ionicons } from "@expo/vector-icons";
-import {
-  deleteCart,
-  getCartByUserID,
-  updateQuantityCart,
-} from "../servers/CartService";
+
+import { deleteCart, getCartByUserID } from "../servers/CartService";
 
 // Helper function to format a raw CartItemDto from backend into frontend CartItem state
+
 const formatBackendCartItemToFrontend = (backendItem) => {
   // Lấy URL của hình ảnh đầu tiên trong mảng productImages
+
   const imageUrl =
     backendItem.product &&
     backendItem.product.productImages &&
     backendItem.product.productImages.length > 0
       ? backendItem.product.productImages[0].imageUrl
-      : "https://via.placeholder.com/150"; // Fallback URL
+      : "https://via.placeholder.com/150"; 
 
   return {
     id: backendItem.cartId,
+
     productId: backendItem.product ? backendItem.product.productId : null,
+
     name: backendItem.product ? backendItem.product.title : "Sản phẩm không rõ",
+
     price: backendItem.product ? backendItem.product.price : 0,
+
     quantity: backendItem.quantity,
+
     image: imageUrl,
+
     color: "N/A",
+
     size: "N/A",
+
+    sellerId: backendItem.product ? backendItem.product.sellerId : null,
+
+    isSelected: true, //mặc định là sản phẩm chưa được chọn
   };
 };
 
 const CartScreen = ({ navigation }) => {
   const [cartItems, setCartItems] = useState([]);
+
   const [loading, setLoading] = useState(true);
+
   const [error, setError] = useState(null);
 
   const [isAddressModalVisible, setAddressModalVisible] = useState(false);
-  const [street, setStreet] = useState("26, Đường Số 2, P. Thảo Điền");
-  const [ward, setWard] = useState("An Phú");
-  const [district, setDistrict] = useState("Quận 2");
-  const [city, setCity] = useState("TP.HCM");
 
-  // Hàm để format tiền tệ Việt Nam
+  const [street, setStreet] = useState("26, Đường Số 2, P. Thảo Điền");
+
+  const [ward, setWard] = useState("An Phú");
+
+  const [district, setDistrict] = useState("Quận 2");
+
+  const [city, setCity] = useState("TP.HCM"); // Hàm để format tiền tệ Việt Nam
+
   const formatCurrency = (amount) => {
     // Đảm bảo amount là một số hợp lệ trước khi format
+
     if (typeof amount !== "number" || isNaN(amount)) {
       return "0đ"; // Hoặc một giá trị mặc định khác
     }
+
     return new Intl.NumberFormat("vi-VN", {
       style: "currency",
+
       currency: "VND",
+
       minimumFractionDigits: 0,
+
       maximumFractionDigits: 0,
     }).format(amount);
   };
 
   const fetchCartItems = useCallback(async () => {
     setLoading(true);
+
     setError(null);
+
     try {
       const data = await getCartByUserID(); // data là một mảng các CartItemDto
+
       const formattedCartItems = data.map((item) =>
         formatBackendCartItemToFrontend(item)
       );
+
       setCartItems(formattedCartItems);
     } catch (err) {
       console.error("Lỗi khi tải giỏ hàng:", err);
+
       setError("Không thể tải giỏ hàng. Vui lòng thử lại.");
+
       setCartItems([]);
     } finally {
       setLoading(false);
@@ -86,92 +114,61 @@ const CartScreen = ({ navigation }) => {
 
   useEffect(() => {
     fetchCartItems();
+
     const unsubscribe = navigation.addListener("focus", () => {
       fetchCartItems();
     });
+
     return unsubscribe;
-  }, [fetchCartItems, navigation]);
+  }, [fetchCartItems, navigation]); // Xử lý khi nhấn vào checkbox của sản phẩm
 
-  // Tính tổng tiền
+  const toggleItemSelection = (cartId) => {
+    setCartItems((prevItems) =>
+      prevItems.map((item) =>
+        item.id === cartId ? { ...item, isSelected: !item.isSelected } : item
+      )
+    );
+  }; // Tính tổng tiền chỉ cho các sản phẩm đã được chọn
+
   const totalAmount = cartItems.reduce(
-    (total, item) => total + (item.price * item.quantity || 0), // Đảm bảo item.price * item.quantity là số
+    (total, item) => total + (item.isSelected ? item.price * item.quantity : 0),
+
     0
-  );
+  ); //Xử lý phần bấm vào Thanh toán
 
-  // Xử lý tăng số lượng
-  const increaseQuantity = async (cartId, currentQuantity) => {
-    try {
-      const updatedCartItemDto = await updateQuantityCart(
-        cartId,
-        currentQuantity + 1
-      );
-      const formattedUpdatedItem =
-        formatBackendCartItemToFrontend(updatedCartItemDto);
+  const handleCheckout = () => {
+    const selectedProducts = cartItems.filter((item) => item.isSelected);
 
-      setCartItems(
-        cartItems.map((item) =>
-          item.id === cartId ? formattedUpdatedItem : item
-        )
-      );
-    } catch (error) {
-      console.error("Lỗi khi tăng số lượng:", error);
-      Alert.alert(
-        "Lỗi",
-        error.message ||
-          "Không thể cập nhật số lượng sản phẩm. Vui lòng thử lại."
-      );
+    if (selectedProducts.length == 0) {
+      Alert.alert("Thanh toán", "Hãy chọn sản phẩm để thanh toán");
+    } else {
+      navigation.navigate("Checkout", { selectedProducts: selectedProducts });
     }
-  };
+  }; // Xử lý xóa sản phẩm
 
-  // Xử lý giảm số lượng
-  const decreaseQuantity = async (cartId, currentQuantity) => {
-    if (currentQuantity <= 1) {
-      Alert.alert(
-        "Thông báo",
-        "Số lượng tối thiểu là 1. Để xóa sản phẩm, hãy sử dụng nút xóa."
-      );
-      return;
-    }
-    try {
-      const updatedCartItemDto = await updateQuantityCart(
-        cartId,
-        currentQuantity - 1
-      );
-      const formattedUpdatedItem =
-        formatBackendCartItemToFrontend(updatedCartItemDto);
-
-      setCartItems(
-        cartItems.map((item) =>
-          item.id === cartId ? formattedUpdatedItem : item
-        )
-      );
-    } catch (error) {
-      console.error("Lỗi khi giảm số lượng:", error);
-      Alert.alert(
-        "Lỗi",
-        error.message ||
-          "Không thể cập nhật số lượng sản phẩm. Vui lòng thử lại."
-      );
-    }
-  };
-
-  // Xử lý xóa sản phẩm
   const removeItem = async (cartId) => {
     Alert.alert(
       "Xác nhận xóa",
+
       "Bạn có chắc chắn muốn xóa sản phẩm này khỏi giỏ hàng?",
+
       [
         { text: "Hủy", style: "cancel" },
+
         {
           text: "Xóa",
+
           onPress: async () => {
             try {
               await deleteCart(cartId);
+
               setCartItems(cartItems.filter((item) => item.id !== cartId));
             } catch (error) {
               console.error("Lỗi khi xóa sản phẩm:", error);
+
               Alert.alert(
                 "Lỗi",
+
                 error.message || "Không thể xóa sản phẩm. Vui lòng thử lại."
               );
             }
@@ -183,10 +180,13 @@ const CartScreen = ({ navigation }) => {
 
   const handleSaveAddress = () => {
     console.log("Saving address:", { street, ward, district, city });
+
     Alert.alert(
       "Thông báo",
+
       "Địa chỉ đã được lưu thành công (chức năng lưu API chưa tích hợp)."
     );
+
     setAddressModalVisible(false);
   };
 
@@ -226,20 +226,6 @@ const CartScreen = ({ navigation }) => {
         <View style={{ width: 24 }} />
       </View>
 
-      {/* Delivery Address Section */}
-      <View style={styles.addressContainer}>
-        <Text style={styles.addressTitle}>Địa chỉ giao hàng</Text>
-        <View style={styles.addressContent}>
-          <Text
-            style={styles.addressText}
-          >{`${street}, ${ward}, ${district},`}</Text>
-          <Text style={styles.addressText}>{city}</Text>
-        </View>
-        <TouchableOpacity onPress={() => setAddressModalVisible(true)}>
-          <Ionicons name="pencil" size={20} color="#323660" />
-        </TouchableOpacity>
-      </View>
-
       <View style={styles.mainContentArea}>
         <ScrollView style={styles.content}>
           {/* Danh sách sản phẩm trong giỏ */}
@@ -256,59 +242,55 @@ const CartScreen = ({ navigation }) => {
           ) : (
             cartItems.map((item, index) => (
               <View key={index} style={styles.cartItem}>
-                <View style={styles.itemImageContainer}>
-                  <Image
-                    source={{ uri: item.image }}
-                    style={styles.itemImage}
-                  />
-                  <TouchableOpacity
-                    style={styles.removeButtonOverlay}
-                    onPress={() => removeItem(item.id)}
-                  >
-                    <Ionicons name="trash" size={20} color="white" />
-                  </TouchableOpacity>
-                </View>
-
-                <View style={styles.itemInfo}>
-                  <Text style={styles.itemName}>{item.name}</Text>
-                  <Text
-                    style={styles.itemColorSize}
-                  >{`${item.color}, Size ${item.size}`}</Text>
-
-                  <View style={styles.quantityPriceContainer}>
-                    <Text style={styles.itemPrice}>
-                      {formatCurrency(item.price)}
-                    </Text>
-                    <View style={styles.quantityContainer}>
-                      <TouchableOpacity
-                        style={styles.quantityButton}
-                        onPress={() => decreaseQuantity(item.id, item.quantity)}
-                      >
-                        <Ionicons
-                          name="remove-circle-outline"
-                          size={24}
-                          color="#777"
-                        />
-                      </TouchableOpacity>
-                      <Text style={styles.quantity}>{item.quantity}</Text>
-                      <TouchableOpacity
-                        style={styles.quantityButton}
-                        onPress={() => increaseQuantity(item.id, item.quantity)}
-                      >
-                        <Ionicons
-                          name="add-circle-outline"
-                          size={24}
-                          color="#777"
-                        />
-                      </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.itemContent} // Thêm style này để căn chỉnh nội dung sản phẩm
+                  onPress={() =>
+                    navigation.navigate("ProductDetail", {
+                      productId: item.productId,
+                    })
+                  }
+                >
+                  <View style={styles.itemImageContainer}>
+                    <Image
+                      source={{ uri: item.image }}
+                      style={styles.itemImage}
+                    />
+                    <TouchableOpacity
+                      style={styles.removeButtonOverlay}
+                      onPress={() => removeItem(item.id)}
+                    >
+                      <Ionicons name="trash" size={20} color="white" />
+                    </TouchableOpacity>
+                  </View>
+                  <View style={styles.itemInfo}>
+                    <Text style={styles.itemName}>{item.name}</Text>
+                    <Text
+                      style={styles.itemColorSize}
+                    >{`${item.color}, Size ${item.size}`}</Text>
+                    <View style={styles.quantityPriceContainer}>
+                      <Text style={styles.itemPrice}>
+                        {formatCurrency(item.price * item.quantity)}
+                      </Text>
                     </View>
                   </View>
-                </View>
+                  {/* Checkbox bên trái */}
+                  <TouchableOpacity
+                    style={styles.checkboxContainer}
+                    onPress={() => toggleItemSelection(item.id)}
+                  >
+                    <Ionicons
+                      name={
+                        item.isSelected ? "checkbox-outline" : "square-outline"
+                      }
+                      size={24}
+                      color="#323660"
+                    />
+                  </TouchableOpacity>
+                </TouchableOpacity>
               </View>
             ))
           )}
         </ScrollView>
-
         {/* Tổng tiền và nút thanh toán (Cố định ở dưới) */}
         <View style={styles.footer}>
           <View style={styles.totalContainer}>
@@ -320,15 +302,14 @@ const CartScreen = ({ navigation }) => {
             </View>
             <TouchableOpacity
               style={styles.checkoutButton}
-              onPress={() => navigation.navigate("Checkout")}
+              onPress={handleCheckout}
             >
               <Text style={styles.checkoutButtonText}>Thanh toán</Text>
             </TouchableOpacity>
           </View>
         </View>
       </View>
-
-      {/* Phần chỉnh sửa thông tin */}
+      {/* Phần chỉnh sửa thông tin */}
       <Modal
         animationType="slide"
         transparent={true}
@@ -406,7 +387,8 @@ const styles = StyleSheet.create({
   mainContentArea: { flex: 1 },
   content: { flexGrow: 1, padding: 16, paddingBottom: 150 },
   cartItem: {
-    flexDirection: "row",
+    flexDirection: "row", // Đảm bảo flex row để checkbox và nội dung cạnh nhau
+    alignItems: "center", // Căn giữa theo chiều dọc
     marginBottom: 16,
     padding: 12,
     backgroundColor: "#f8f8f8",
@@ -416,6 +398,15 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
+  },
+  checkboxContainer: {
+    marginRight: 10, // Khoảng cách giữa checkbox và ảnh sản phẩm
+    padding: 5, // Tăng diện tích chạm cho checkbox
+    justifyContent: "center",
+  },
+  itemContent: {
+    flexDirection: "row",
+    flex: 1, // Để nội dung sản phẩm chiếm hết phần còn lại
   },
   itemImageContainer: { position: "relative" },
   itemImage: { width: 100, height: 100, borderRadius: 8 },
@@ -432,6 +423,7 @@ const styles = StyleSheet.create({
   itemColorSize: { fontSize: 14, color: "#666", marginBottom: 8 },
   quantityPriceContainer: {
     flexDirection: "row",
+
     justifyContent: "space-between",
     alignItems: "center",
     marginTop: 8,
@@ -457,28 +449,33 @@ const styles = StyleSheet.create({
     elevation: 10,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent: "space-between", // Giúp đẩy totalContainer sang trái và checkoutButton sang phải
+    // Bỏ flex: 1 ở đây vì footer là container chính
   },
   totalContainer: {
     flexDirection: "row",
     alignItems: "center",
-    flex: 1,
-    marginRight: 16,
+    flex: 1, // Cái này sẽ giúp totalContainer chiếm hết không gian còn lại bên trái
+    marginRight: 15, // Khoảng cách giữa phần tổng cộng và nút Checkout
   },
   totalTextAmountContainer: {
-    paddingRight: 20,
     flexDirection: "row",
     alignItems: "center",
+    // Bạn có thể không cần paddingRight ở đây nếu muốn gọn hơn
   },
   totalText: { fontSize: 18, fontWeight: "500", marginRight: 8 },
   totalAmount: { fontSize: 20, fontWeight: "bold", color: "#e91e63" },
   checkoutButton: {
     backgroundColor: "#323660",
+    // Loại bỏ flex: 1 ở đây!
     height: 50,
     borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 24,
+    paddingHorizontal: 24, // Giữ padding này để nút có độ rộng tự nhiên theo nội dung
+    width: 150, // **Thêm thuộc tính width cố định để nút không thay đổi kích thước**
+    // Hoặc dùng minWidth nếu bạn muốn nó co giãn một chút nhưng có giới hạn:
+    // minWidth: 120,
   },
   checkoutButtonText: { color: "#fff", fontSize: 18, fontWeight: "bold" },
   emptyCartContainer: {

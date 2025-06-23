@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -14,71 +14,69 @@ import {
   TouchableWithoutFeedback,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getOrdersByBuyer } from '../servers/OrderService';
+import { createRating } from '../servers/ProductService';
 
 const ManageOrdersScreen = ({ navigation }) => {
-  // Mock data for orders list (replace with actual data fetching)
-  const orders = [
-    {
-      id: 1,
-      orderId: '#92287157',
-      product: {
-        name: 'Mắt kính chanel',
-        shippingMethod: 'Giao Hàng tiêu chuẩn',
-        status: 'Đã đóng gói',
-        image: 'https://via.placeholder.com/100', // Placeholder image
-      },
-      action: 'Theo dõi', // 'Theo dõi' or 'Đánh giá'
-    },
-    {
-      id: 2,
-       orderId: '#92287157',
-      product: {
-        name: 'Áo khoác Supreme',
-        shippingMethod: 'Giao hàng tiêu chuẩn',
-        status: 'Đang vận chuyển',
-        image: 'https://via.placeholder.com/100', // Placeholder image
-      },
-      action: 'Theo dõi',
-    },
-     {
-      id: 3,
-       orderId: '#92287157',
-      product: {
-        name: 'Quần Jean Whose',
-        shippingMethod: 'Giao hàng tiêu chuẩn',
-        status: 'Đã Nhận',
-      image: 'https://via.placeholder.com/100', // Placeholder image
-      },
-      action: 'Đánh giá',
-    },
-    {
-        id: 4, // New failed order
-        orderId: '#92287158', // Different order ID
-        product: {
-            name: 'Áo thun Nike', // Example product name
-            shippingMethod: 'Giao hàng tiêu chuẩn',
-            status: 'Giao hàng không thành công',
-            image: 'https://via.placeholder.com/100', // Placeholder image
-        },
-        action: 'Theo dõi', // Still 'Theo dõi' button
-        isFailed: true, // Flag to indicate failed delivery
-    },
-    {
-        id: 5, // New successful order
-        orderId: '#92287159', // Different order ID
-        product: {
-            name: 'Áo khoác zip', // Example product name
-            shippingMethod: 'Giao hàng tiêu chuẩn',
-            status: 'Giao hàng thành công',
-            image: 'https://via.placeholder.com/100', // Placeholder image
-        },
-        action: 'Theo dõi', // Should still be 'Theo dõi' before rating
-        isSuccessful: true, // Flag to indicate successful delivery
-    },
-    // Add more mock orders as needed
-  ];
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useFocusEffect(
+    useCallback(() => {
+      const fetchOrders = async () => {
+        try {
+          setLoading(true);
+          const userId = await AsyncStorage.getItem('userId');
+          if (userId) {
+            console.log("Fetching orders for userId:", userId);
+            const fetchedOrders = await getOrdersByBuyer(userId);
+            if (fetchedOrders) {
+              const userIdInt = parseInt(userId);
+              const formattedOrders = fetchedOrders.map(order => {
+                const allProductsReviewed = order.orderDetails.every(detail =>
+                  detail.product.ratings.some(rating => rating.userId === userIdInt)
+                );
+
+                return {
+                  id: order.orderId, // Use orderId as the key
+                  orderId: `#${order.orderId}`,
+                  rawOrderId: order.orderId,
+                  products: order.orderDetails.map(detail => ({
+                    productId: detail.product.productId,
+                    name: detail.product.title,
+                    image: detail.product.productImages && detail.product.productImages.length > 0
+                      ? detail.product.productImages[0].imageUrl
+                      : 'https://via.placeholder.com/100',
+                    isReviewed: detail.product.ratings.some(rating => rating.userId === userIdInt),
+                  })),
+                  status: order.status,
+                  shippingMethod: 'Giao hàng tiêu chuẩn',
+                  action: (order.status === 'Đã Nhận' || order.status === 'Giao hàng thành công' || order.status === 'delivered') ? 'Đánh giá' : 'Theo dõi',
+                  isFailed: order.status === 'Giao hàng không thành công',
+                  isSuccessful: order.status === 'Giao hàng thành công',
+                  isReviewed: allProductsReviewed, // Represents if the entire order is reviewed
+                };
+              });
+              setOrders(formattedOrders);
+            }
+          }
+        } catch (error) {
+          console.error("Failed to fetch orders:", error);
+          // Error is already handled by handleApiError in the service
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      fetchOrders();
+    }, [])
+  );
 
   // State cho modal đánh giá
   const [isReviewModalVisible, setReviewModalVisible] = useState(false);
@@ -98,11 +96,35 @@ const ManageOrdersScreen = ({ navigation }) => {
   };
 
   // Hàm gửi đánh giá
-  const handleSendReview = () => {
-    setReviewModalVisible(false);
-    setLastRating(rating);
-    setTimeout(() => setCompleteModalVisible(true), 300);
-    setTimeout(() => setCompleteModalVisible(false), 1800);
+  const handleSendReview = async () => {
+    if (!selectedOrder) return;
+
+    try {
+        const userId = await AsyncStorage.getItem('userId');
+        if (!userId) {
+            Alert.alert("Lỗi", "Không tìm thấy người dùng. Vui lòng đăng nhập lại.");
+            return;
+        }
+
+        const ratingData = {
+            userId: parseInt(userId),
+            productId: selectedOrder.product.productId,
+            stars: rating,
+            comment: reviewText,
+        };
+
+        await createRating(ratingData);
+
+        setReviewModalVisible(false);
+        setLastRating(rating);
+        setTimeout(() => setCompleteModalVisible(true), 300);
+        setTimeout(() => setCompleteModalVisible(false), 1800);
+
+    } catch (error) {
+        // The error is already handled by handleApiError in the service
+        // You might want to add additional logic here if needed
+        console.log("Failed to submit review from component");
+    }
   };
 
   // Render dãy sao
@@ -125,11 +147,11 @@ const ManageOrdersScreen = ({ navigation }) => {
 
   const renderOrderItem = ({ item }) => (
     <View style={styles.orderItemContainer}>
-      <Image source={{ uri: item.product.image }} style={styles.productImage} />
+      <Image source={{ uri: item.products.length > 0 ? item.products[0].image : 'https://via.placeholder.com/100' }} style={styles.productImage} />
       <View style={styles.orderItemDetails}>
-        <Text style={styles.productName}>{item.product.name}</Text>
-        <Text style={styles.shippingMethod}>{item.product.shippingMethod}</Text>
-        <Text style={styles.orderStatus}>{item.product.status}</Text>
+        <Text style={styles.productName} numberOfLines={2}>{item.products.map(p => p.name).join(', ')}</Text>
+        <Text style={styles.shippingMethod}>{`${item.products.length} sản phẩm`}</Text>
+        <Text style={styles.orderStatus}>{item.status}</Text>
       </View>
       <View style={styles.orderItemRight}>
           <Text style={styles.orderId}>{item.orderId}</Text>
@@ -140,17 +162,39 @@ const ManageOrdersScreen = ({ navigation }) => {
                   } else if (item.isSuccessful) {
                       navigation.navigate('SuccessfulDeliveryDetails');
                   } else {
-                      navigation.navigate('OrderDetails');
+                      navigation.navigate('OrderDetails', { orderId: item.rawOrderId });
                   }
               }}>
                   <Text style={styles.actionButtonText}>{item.action}</Text>
               </TouchableOpacity>
           ) : (
-               <TouchableOpacity style={styles.actionButton} onPress={() => openReviewModal(item)}>
-                  <Text style={styles.actionButtonText}>{item.action}</Text>
+               <TouchableOpacity 
+                  style={[styles.actionButton, item.isReviewed && styles.disabledButton]} 
+                  onPress={() => {
+                    if (item.isReviewed) return;
+
+                    if (item.products.length > 1) {
+                      // Placeholder for navigating to a new screen for multi-product review
+                      navigation.navigate('RateProducts', { order: item });
+                    } else if (item.products.length === 1) {
+                      const productToReview = item.products[0];
+                      if (!productToReview.isReviewed) {
+                        openReviewModal({
+                            orderId: item.orderId,
+                            product: {
+                                productId: productToReview.productId,
+                                name: productToReview.name,
+                            },
+                        });
+                      }
+                    }
+                  }}
+                  disabled={item.isReviewed}
+                >
+                  <Text style={styles.actionButtonText}>{item.isReviewed ? 'Đã đánh giá' : 'Đánh giá'}</Text>
               </TouchableOpacity>
           )}
-          {item.product.status === 'Đã Nhận' && (
+          {item.status === 'Đã Nhận' && (
               <Ionicons name="checkmark-circle" size={20} color="#323660" style={styles.receivedIcon} />
           )}
       </View>
@@ -184,12 +228,20 @@ const ManageOrdersScreen = ({ navigation }) => {
       </View>
 
       {/* Orders List */}
-      <FlatList
-        data={orders}
-        renderItem={renderOrderItem}
-        keyExtractor={(item) => item.id.toString()}
-        contentContainerStyle={styles.listContentContainer}
-      />
+      {loading ? (
+        <ActivityIndicator size="large" color="#323660" style={{ flex: 1 }} />
+      ) : orders.length === 0 ? (
+        <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>Bạn chưa có đơn hàng nào.</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={orders}
+          renderItem={renderOrderItem}
+          keyExtractor={(item) => item.id.toString()}
+          contentContainerStyle={styles.listContentContainer}
+        />
+      )}
 
       {/* Review Modal */}
       <Modal
@@ -198,9 +250,16 @@ const ManageOrdersScreen = ({ navigation }) => {
         visible={isReviewModalVisible}
         onRequestClose={() => setReviewModalVisible(false)}
       >
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-            <View style={modalStyles.modalBackground}>
+        <TouchableOpacity
+          style={modalStyles.modalBackground}
+          activeOpacity={1}
+          onPressOut={() => setReviewModalVisible(false)}
+        >
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            style={styles.keyboardAvoidingView}
+          >
+            <TouchableWithoutFeedback>
               <View style={modalStyles.modalContainer}>
                 {/* Tiêu đề */}
                 <Text style={modalStyles.modalTitle}>Đánh giá</Text>
@@ -219,26 +278,27 @@ const ManageOrdersScreen = ({ navigation }) => {
                     </Text>
                   </View>
                 </View>
-                {/* Dãy sao */}
+
+                {/* Stars */}
                 {renderStars()}
-                {/* Ô nhập đánh giá */}
+                
+                {/* Input */}
                 <TextInput
-                  style={modalStyles.textInput}
-                  placeholder="Nhập đánh giá của bạn..."
-                  placeholderTextColor="#888"
+                  style={modalStyles.input}
+                  placeholder="Chia sẻ cảm nhận của bạn về sản phẩm này..."
+                  multiline
                   value={reviewText}
                   onChangeText={setReviewText}
-                  multiline
-                  numberOfLines={4}
                 />
+
                 {/* Nút gửi */}
                 <TouchableOpacity style={modalStyles.sendButton} onPress={handleSendReview}>
-                  <Text style={modalStyles.sendButtonText}>Gửi đi!</Text>
+                  <Text style={modalStyles.sendButtonText}>Gửi đi</Text>
                 </TouchableOpacity>
               </View>
-            </View>
+            </TouchableWithoutFeedback>
           </KeyboardAvoidingView>
-        </TouchableWithoutFeedback>
+        </TouchableOpacity>
       </Modal>
 
       {/* Complete Modal */}
@@ -320,6 +380,15 @@ const styles = StyleSheet.create({
   listContentContainer: {
       padding: 16,
   },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#666',
+  },
   orderItemContainer: {
       flexDirection: 'row',
       backgroundColor: '#fff',
@@ -373,6 +442,9 @@ const styles = StyleSheet.create({
        paddingHorizontal: 12,
        alignItems: 'center',
    },
+   disabledButton: {
+      backgroundColor: '#c0c0c0', // Gray color for disabled button
+   },
    actionButtonText: {
        color: '#fff',
        fontSize: 13,
@@ -382,6 +454,11 @@ const styles = StyleSheet.create({
         marginLeft: 0,
         marginTop: 8, // Space below the button
     },
+  keyboardAvoidingView: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 });
 
 // Thêm style cho modal đánh giá và hoàn thành
@@ -413,7 +490,7 @@ const modalStyles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#fff',
   },
-  textInput: {
+  input: {
     backgroundColor: '#f8f8f8',
     borderRadius: 10,
     padding: 14,

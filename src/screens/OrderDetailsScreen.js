@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
   Text,
@@ -7,35 +8,213 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { getOrderById } from '../servers/OrderService';
 
-const OrderDetailsScreen = ({ navigation }) => {
-  // Mock data for order details (replace with actual data fetching)
-  const orderDetails = {
-    id: '#92287157',
-    status: 'chờ xác nhận',
-    shippingMethod: 'Giao Hàng tiêu chuẩn',
-    product: {
-      name: 'Áo hoddie superme đen chữ đỏ',
-      price: 170000,
-      image: 'https://via.placeholder.com/150', // Placeholder image
-    },
-    trackingNumber: 'LGS-I92927839300763731',
-    orderHistory: [
-      {
-        status: 'Đã đặt hàng',
-        description: 'Bạn xác nhận mua hàng và đang chờ người bán xác nhận',
-        date: '19/04 – 12:31',
-      },
-      // Add more history steps here
-    ],
-    // You might add more fields like payment method, total amount, etc.
+const OrderDetailsScreen = ({ navigation, route }) => {
+  const [orderDetails, setOrderDetails] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const orderId = route.params?.orderId;
+
+  const fetchOrderDetails = async () => {
+    if (!orderId) {
+      setError('Không có ID đơn hàng');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      const order = await getOrderById(orderId);
+      
+      if (order) {
+        setOrderDetails(order);
+      } else {
+        setError('Không thể tải thông tin đơn hàng');
+      }
+    } catch (err) {
+      setError('Có lỗi xảy ra khi tải thông tin đơn hàng');
+      console.error('Error fetching order details:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Placeholder for progress steps (adjust based on actual order status)
-  const progressSteps = [0, 1, 2]; // 3 steps: Ordered, Confirmed, Shipped, Delivered
-  const currentStep = 0; // Current step (0 for chờ xác nhận)
+  useFocusEffect(
+    useCallback(() => {
+      fetchOrderDetails();
+    }, [orderId])
+  );
+
+  // Hàm chuyển đổi trạng thái đơn hàng sang tiếng Việt
+  const getStatusText = (status) => {
+    const statusMap = {
+      'pending': 'Chờ xác nhận',
+      'confirmed': 'Đã xác nhận',
+      'shipping': 'Đang giao hàng',
+      'delivered': 'Đã giao hàng',
+      'cancelled': 'Đã hủy',
+      'returned': 'Đã hoàn trả'
+    };
+    return statusMap[status] || status;
+  };
+
+  // Hàm chuyển đổi trạng thái giao hàng sang tiếng Việt
+  const getDeliveryStatusText = (deliveryStatus) => {
+    const deliveryStatusMap = {
+      'waiting': 'Chờ giao hàng',
+      'shipping': 'Đang giao hàng',
+      'delivered': 'Đã giao hàng',
+      'failed': 'Giao hàng thất bại'
+    };
+    return deliveryStatusMap[deliveryStatus] || deliveryStatus;
+  };
+
+  // Hàm tạo lịch sử đơn hàng dựa trên trạng thái
+  const generateOrderHistory = (order) => {
+    const history = [];
+    
+    // Đơn hàng đã được tạo
+    history.push({
+      status: 'Đã đặt hàng',
+      description: 'Bạn đã xác nhận mua hàng và đang chờ người bán xác nhận',
+      date: new Date(order.createdAt).toLocaleDateString('vi-VN', {
+        day: '2-digit',
+        month: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      }).replace(',', ' -'),
+      completed: true
+    });
+
+    // Nếu đã xác nhận
+    if (order.status === 'confirmed' || order.status === 'shipping' || order.status === 'delivered') {
+      history.push({
+        status: 'Đã xác nhận',
+        description: 'Người bán đã xác nhận đơn hàng của bạn',
+        date: new Date(order.createdAt).toLocaleDateString('vi-VN', {
+          day: '2-digit',
+          month: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit'
+        }).replace(',', ' -'),
+        completed: true
+      });
+    }
+
+    // Nếu đang giao hàng
+    if (order.status === 'shipping' || order.status === 'delivered') {
+      history.push({
+        status: 'Đang giao hàng',
+        description: 'Đơn hàng đang được vận chuyển đến bạn',
+        date: new Date(order.createdAt).toLocaleDateString('vi-VN', {
+          day: '2-digit',
+          month: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit'
+        }).replace(',', ' -'),
+        completed: true
+      });
+    }
+
+    // Nếu đã giao hàng
+    if (order.status === 'delivered') {
+      history.push({
+        status: 'Đã giao hàng',
+        description: 'Đơn hàng đã được giao thành công',
+        date: new Date(order.createdAt).toLocaleDateString('vi-VN', {
+          day: '2-digit',
+          month: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit'
+        }).replace(',', ' -'),
+        completed: true
+      });
+    }
+
+    // Nếu đã hủy
+    if (order.status === 'cancelled') {
+      history.push({
+        status: 'Đã hủy',
+        description: 'Đơn hàng đã được hủy',
+        date: new Date(order.createdAt).toLocaleDateString('vi-VN', {
+          day: '2-digit',
+          month: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit'
+        }).replace(',', ' -'),
+        completed: true
+      });
+    }
+
+    return history;
+  };
+
+  // Hàm tính bước hiện tại trong quá trình đơn hàng
+  const getCurrentStep = (order) => {
+    switch (order.status) {
+      case 'pending':
+        return 0;
+      case 'confirmed':
+        return 1;
+      case 'shipping':
+        return 2;
+      case 'delivered':
+        return 3;
+      case 'cancelled':
+        return -1; // Đã hủy
+      default:
+        return 0;
+    }
+  };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.safeAreaContainer}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={24} color="black" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Chi tiết đơn hàng</Text>
+          <View style={{ width: 24 }} />
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#323660" />
+          <Text style={styles.loadingText}>Đang tải thông tin đơn hàng...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (error || !orderDetails) {
+    return (
+      <SafeAreaView style={styles.safeAreaContainer}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={24} color="black" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Chi tiết đơn hàng</Text>
+          <View style={{ width: 24 }} />
+        </View>
+        <View style={styles.errorContainer}>
+          <Ionicons name="alert-circle-outline" size={48} color="#e74c3c" />
+          <Text style={styles.errorText}>{error || 'Không thể tải thông tin đơn hàng'}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={fetchOrderDetails}>
+            <Text style={styles.retryButtonText}>Thử lại</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const orderHistory = generateOrderHistory(orderDetails);
+  const currentStep = getCurrentStep(orderDetails);
+  const progressSteps = [0, 1, 2, 3]; // 4 bước: Đặt hàng, Xác nhận, Giao hàng, Hoàn thành
 
   return (
     <SafeAreaView style={styles.safeAreaContainer}>
@@ -45,69 +224,118 @@ const OrderDetailsScreen = ({ navigation }) => {
           <Ionicons name="arrow-back" size={24} color="black" />
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
-           {/* Placeholder for avatar/icon */}
            <View style={styles.avatarPlaceholder}></View>
            <View>
-             <Text style={styles.headerTitle}>Đơn hàng</Text>
-             <Text style={styles.headerSubtitle}>Trạng thái đơn hàng</Text>
+             <Text style={styles.headerTitle}>Đơn hàng #{orderDetails.orderId}</Text>
+             <Text style={styles.headerSubtitle}>{getStatusText(orderDetails.status)}</Text>
            </View>
         </View>
 
         <View style={styles.headerIcons}>
             <TouchableOpacity style={styles.headerIcon}>
-                 <Ionicons name="list" size={24} color="#323660" />{/* Placeholder icon */}
+                 <Ionicons name="list" size={24} color="#323660" />
             </TouchableOpacity>
              <TouchableOpacity style={styles.headerIcon}>
-                <Ionicons name="settings-outline" size={24} color="#323660" />{/* Placeholder icon */}
+                <Ionicons name="settings-outline" size={24} color="#323660" />
             </TouchableOpacity>
         </View>
       </View>
 
       <ScrollView style={styles.scrollView}>
-        {/* Order Summary/Product Info */}
+        {/* Thông tin địa chỉ giao hàng */}
+        {orderDetails.address && (
+          <View style={styles.sectionContainer}>
+            <Text style={styles.sectionTitle}>Địa chỉ giao hàng</Text>
+            <View style={styles.addressInfo}>
+              <Text style={styles.addressName}>{orderDetails.address.fullName}</Text>
+              <Text style={styles.addressPhone}>{orderDetails.address.phoneNumber}</Text>
+              <Text style={styles.addressText}>
+                {orderDetails.address.addressLine}, {orderDetails.address.city}
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {/* Danh sách sản phẩm */}
         <View style={styles.sectionContainer}>
-          <View style={styles.productSummary}>
-             <Image source={{ uri: orderDetails.product.image }} style={styles.productImage} />
-             <View style={styles.productInfo}>
-               <Text style={styles.productName}>{`${orderDetails.product.name} ${orderDetails.id}`}</Text>
-               <Text style={styles.shippingMethod}>{orderDetails.shippingMethod}</Text>
-                <View style={styles.statusPriceContainer}>
-                   <Text style={styles.orderStatus}>{orderDetails.status}</Text>
-                    <Text style={styles.productPrice}>{orderDetails.product.price.toLocaleString('vi-VN')}đ</Text>
-                </View>
-             </View>
+          <Text style={styles.sectionTitle}>Sản phẩm ({orderDetails.orderDetails?.length || 0})</Text>
+          {orderDetails.orderDetails?.map((item, index) => (
+            <View key={index} style={styles.productItem}>
+              <Image 
+                source={{ uri: item.product?.productImages[0]?.imageUrl || 'https://via.placeholder.com/150' }} 
+                style={styles.productImage} 
+              />
+              <View style={styles.productInfo}>
+                <Text style={styles.productName}>{item.product?.title || item.productTitle || 'Sản phẩm không xác định'}</Text>
+                <Text style={styles.productPrice}>
+                  {item.snapshotPrice?.toLocaleString('vi-VN')}đ x {item.quantity}
+                </Text>
+                <Text style={styles.productTotal}>
+                  Tổng: {(item.snapshotPrice * item.quantity).toLocaleString('vi-VN')}đ
+                </Text>
+              </View>
+            </View>
+          ))}
+        </View>
+
+        {/* Thông tin thanh toán */}
+        <View style={styles.sectionContainer}>
+          <Text style={styles.sectionTitle}>Thông tin thanh toán</Text>
+          <View style={styles.paymentInfo}>
+            <View style={styles.paymentRow}>
+              <Text style={styles.paymentLabel}>Tổng tiền hàng:</Text>
+              <Text style={styles.paymentValue}>
+                {orderDetails.totalPrice?.toLocaleString('vi-VN')}đ
+              </Text>
+            </View>
+            {orderDetails.discountAmount > 0 && (
+              <View style={styles.paymentRow}>
+                <Text style={styles.paymentLabel}>Giảm giá:</Text>
+                <Text style={styles.paymentValueDiscount}>
+                  -{orderDetails.discountAmount?.toLocaleString('vi-VN')}đ
+                </Text>
+              </View>
+            )}
+            <View style={styles.paymentRow}>
+              <Text style={styles.paymentLabel}>Tổng cộng:</Text>
+              <Text style={styles.paymentValueTotal}>
+                {orderDetails.finalTotal?.toLocaleString('vi-VN')}đ
+              </Text>
+            </View>
+            <View style={styles.paymentRow}>
+              <Text style={styles.paymentLabel}>Trạng thái thanh toán:</Text>
+              <Text style={[styles.paymentValue, { color: orderDetails.paidStatus ? '#27ae60' : '#e74c3c' }]}>
+                {orderDetails.paidStatus ? 'Đã thanh toán' : 'Chưa thanh toán'}
+              </Text>
+            </View>
           </View>
         </View>
 
         {/* Order Progress Bar */}
-        <View style={styles.sectionContainer}>
-           <View style={styles.progressBarContainer}>
+        {currentStep >= 0 && (
+          <View style={styles.sectionContainer}>
+            <Text style={styles.sectionTitle}>Tiến trình đơn hàng</Text>
+            <View style={styles.progressBarContainer}>
                {progressSteps.map((step) => (
                    <View key={step} style={[styles.progressDot, step <= currentStep && styles.progressDotActive]}></View>
                ))}
                <View style={styles.progressBarLine}></View>
-                {/* This is a simplified progress bar, a real one would be more complex */}
-           </View>
-        </View>
-
-        {/* Tracking Number */}
-        <View style={styles.sectionContainer}>
-            <View style={styles.trackingContainer}>
-                <View>
-                    <Text style={styles.trackingLabel}>Mã vận đơn</Text>
-                    <Text style={styles.trackingNumber}>{orderDetails.trackingNumber}</Text>
-                </View>
-                 <TouchableOpacity style={styles.trackingIcon}>
-                     <Ionicons name="document-text-outline" size={24} color="#323660" />
-                 </TouchableOpacity>
             </View>
-        </View>
+            <View style={styles.progressLabels}>
+              <Text style={styles.progressLabel}>Đặt hàng</Text>
+              <Text style={styles.progressLabel}>Xác nhận</Text>
+              <Text style={styles.progressLabel}>Giao hàng</Text>
+              <Text style={styles.progressLabel}>Hoàn thành</Text>
+            </View>
+          </View>
+        )}
 
         {/* Order History */}
          <View style={styles.sectionContainer}>
-            {orderDetails.orderHistory.map((historyItem, index) => (
+            <Text style={styles.sectionTitle}>Lịch sử đơn hàng</Text>
+            {orderHistory.map((historyItem, index) => (
                  <View key={index} style={styles.historyItem}>
-                     <View style={styles.historyDot}></View>
+                     <View style={[styles.historyDot, historyItem.completed && styles.historyDotCompleted]}></View>
                      <View style={styles.historyContent}>
                          <View style={styles.historyHeader}>
                              <Text style={styles.historyStatus}>{historyItem.status}</Text>
@@ -120,11 +348,6 @@ const OrderDetailsScreen = ({ navigation }) => {
         </View>
 
       </ScrollView>
-
-       {/* Footer (Placeholder for Tab Bar) */}
-       {/* You can conditionally render the Tab Bar if this screen is part of a Tab Navigator */}
-       {/* For this example, assuming it is part of the Tab Navigator structure setup earlier */}
-
     </SafeAreaView>
   );
 };
@@ -152,7 +375,7 @@ const styles = StyleSheet.create({
       width: 40,
       height: 40,
       borderRadius: 20,
-      backgroundColor: '#e0e0e0', // Placeholder color
+      backgroundColor: '#e0e0e0',
       marginRight: 10,
   },
   headerTitle: {
@@ -184,125 +407,195 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 2,
   },
-   productSummary: {
-       flexDirection: 'row',
-       alignItems: 'center',
-   },
-   productImage: {
-       width: 80,
-       height: 80,
-       borderRadius: 8,
-       marginRight: 16,
-   },
-   productInfo: {
-       flex: 1,
-   },
-   productName: {
-       fontSize: 16,
-       fontWeight: 'bold',
-       marginBottom: 4,
-   },
-   shippingMethod: {
-       fontSize: 14,
-       color: '#555',
-       marginBottom: 8,
-   },
-    statusPriceContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-   orderStatus: {
-       fontSize: 16,
-       fontWeight: 'bold',
-       color: '#323660', // Dark blue color
-   },
-   productPrice: {
-       fontSize: 16,
-       fontWeight: 'bold',
-       color: '#e91e63', // Pinkish color
-   },
-   progressBarContainer: {
-       flexDirection: 'row',
-       alignItems: 'center',
-       justifyContent: 'space-between',
-       paddingHorizontal: 20, // Adjust as needed
-       marginBottom: 10,
-       position: 'relative',
-   },
-    progressBarLine: {
-        position: 'absolute',
-        top: '50%',
-        left: 25, // Align with dot centers
-        right: 25,
-        height: 4,
-        backgroundColor: '#e0e0e0', // Light gray line
-        zIndex: -1, // Behind the dots
-    },
-   progressDot: {
-       width: 12,
-       height: 12,
-       borderRadius: 6,
-       backgroundColor: '#e0e0e0', // Inactive dot color
-   },
-   progressDotActive: {
-       backgroundColor: '#323660', // Active dot color
-   },
-   trackingContainer: {
-       flexDirection: 'row',
-       justifyContent: 'space-between',
-       alignItems: 'center',
-   },
-   trackingLabel: {
-       fontSize: 14,
-       color: '#555',
-   },
-   trackingNumber: {
-       fontSize: 16,
-       fontWeight: 'bold',
-       color: '#333',
-       marginTop: 4,
-   },
-   trackingIcon: {
-       padding: 5,
-   },
-   historyItem: {
-       flexDirection: 'row',
-       marginBottom: 16,
-   },
-   historyDot: {
-       width: 8,
-       height: 8,
-       borderRadius: 4,
-       backgroundColor: '#323660', // Dot color
-       marginTop: 5, // Align with text baseline
-       marginRight: 10,
-   },
-   historyContent: {
-       flex: 1,
-   },
-   historyHeader: {
-       flexDirection: 'row',
-       justifyContent: 'space-between',
-       marginBottom: 4,
-   },
-   historyStatus: {
-       fontSize: 15,
-       fontWeight: 'bold',
-       color: '#333',
-   },
-   historyDate: {
-       fontSize: 13,
-       color: '#777',
-   },
-   historyDescription: {
-       fontSize: 14,
-       color: '#555',
-   },
-
-   // Placeholder styles for Tab Bar (adjust based on your Tab Navigator styles)
-   // If using the MainTabs component, these styles might not be needed here.
-
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 12,
+  },
+  addressInfo: {
+    marginBottom: 8,
+  },
+  addressName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  addressPhone: {
+    fontSize: 14,
+    color: '#555',
+    marginBottom: 4,
+  },
+  addressText: {
+    fontSize: 14,
+    color: '#555',
+  },
+  productItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+    paddingTop: 12,
+  },
+  productImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    marginRight: 16,
+  },
+  productInfo: {
+    flex: 1,
+  },
+  productName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  productPrice: {
+    fontSize: 14,
+    color: '#555',
+    marginBottom: 2,
+  },
+  productTotal: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    color: '#e91e63',
+  },
+  paymentInfo: {
+    marginBottom: 8,
+  },
+  paymentRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  paymentLabel: {
+    fontSize: 14,
+    color: '#555',
+  },
+  paymentValue: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  paymentValueDiscount: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#27ae60',
+  },
+  paymentValueTotal: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#e91e63',
+  },
+  progressBarContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    marginBottom: 10,
+    position: 'relative',
+  },
+  progressBarLine: {
+    position: 'absolute',
+    top: '50%',
+    left: 25,
+    right: 25,
+    height: 4,
+    backgroundColor: '#e0e0e0',
+    zIndex: -1,
+  },
+  progressDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#e0e0e0',
+  },
+  progressDotActive: {
+    backgroundColor: '#323660',
+  },
+  progressLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 10,
+  },
+  progressLabel: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
+    flex: 1,
+  },
+  historyItem: {
+    flexDirection: 'row',
+    marginBottom: 16,
+  },
+  historyDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#e0e0e0',
+    marginTop: 5,
+    marginRight: 10,
+  },
+  historyDotCompleted: {
+    backgroundColor: '#323660',
+  },
+  historyContent: {
+    flex: 1,
+  },
+  historyHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  historyStatus: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  historyDate: {
+    fontSize: 13,
+    color: '#777',
+  },
+  historyDescription: {
+    fontSize: 14,
+    color: '#555',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#666',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+  },
+  errorText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  retryButton: {
+    backgroundColor: '#323660',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
 });
 
 export default OrderDetailsScreen; 

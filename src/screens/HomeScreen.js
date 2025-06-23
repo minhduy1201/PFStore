@@ -1,8 +1,24 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, TextInput, TouchableOpacity, Alert, Modal, TouchableWithoutFeedback, Keyboard } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { GetCategories, getProducts, GetProducts } from '../servers/ProductService';
+import React, { useEffect, useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Image,
+  TextInput,
+  TouchableOpacity,
+  Alert,
+  Modal,
+  TouchableWithoutFeedback,
+  Keyboard,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import {
+  GetCategories,
+  getProducts,
+  GetProducts,
+} from "../servers/ProductService";
 
 export default function HomeScreen({ navigation }) {
   const [categories, setCategories] = useState([]);
@@ -13,7 +29,7 @@ export default function HomeScreen({ navigation }) {
     const checkLoginStatus = async () => {
       try {
         const token = await AsyncStorage.getItem("token");
-        const user = await AsyncStorage.getItem("user");
+        const user = await AsyncStorage.getItem("current_user");
         if (!token || !user) {
           navigation.replace("Login");
         }
@@ -24,7 +40,7 @@ export default function HomeScreen({ navigation }) {
     };
 
     checkLoginStatus();
-  }, [categories, navigation]);
+  }, [navigation]);
 
   useEffect(() => {
     const loadCategories = async () => {
@@ -63,22 +79,20 @@ export default function HomeScreen({ navigation }) {
     navigation.navigate("SearchProducts", { keyword }); // Chuyển sang màn hình SearchProducts với từ khóa
   };
 
-
-
   return (
     <ScrollView style={styles.container}>
       {/* Thanh tìm kiếm */}
       <View style={styles.header}>
         <Image
-          source={require('../../assets/images/logo.jpg')}
+          source={require("../../assets/images/logo.jpg")}
           style={styles.logo}
           resizeMode="contain"
         />
-        <TextInput 
-        style={styles.searchInput} 
-        placeholder="Tìm kiếm sản phẩm"
-        value={keyword}
-        onChangeText={(text) => setKeyword(text)}
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Tìm kiếm sản phẩm"
+          value={keyword}
+          onChangeText={(text) => setKeyword(text)}
         />
         <TouchableOpacity onPress={handleSearch} style={styles.searchButton}>
           <Ionicons name="search" size={24} color="black" />
@@ -146,9 +160,9 @@ export default function HomeScreen({ navigation }) {
               }
               activeOpacity={0.85}
             >
-              {prod.productImages && prod.productImages.length > 0 ? (
+              {prod.images && prod.images.length > 0 ? (
                 <Image
-                  source={{ uri: prod.productImages[0].imageUrl }}
+                  source={{ uri: prod.images[0] }}
                   style={styles.productImage}
                   resizeMode="cover"
                 />

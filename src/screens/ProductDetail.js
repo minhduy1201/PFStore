@@ -293,19 +293,66 @@ export default function ProductDetail({ route, navigation }) {
   const handleAddCart = async () => {
     const quantity = 1;
     try {
-      await addCart(productId, quantity);
-      Alert.alert("Thành công", "Đi đến giỏ hàng", [
-        { text: "Hủy", style: "cancel" },
-        {
-          text: "OK",
-          onPress: () => {
-            navigation.navigate("CartScreen");
+      const data = await addCart(productId, quantity);
+      success = data.success;
+      if (success) {
+        Alert.alert("Thành công", "Đi đến giỏ hàng", [
+          { text: "Hủy", style: "cancel" },
+          {
+            text: "OK",
+            onPress: () => {
+              navigation.navigate("CartScreen");
+            },
           },
-        },
-      ]);
+        ]);
+      }
+      if (!success) {
+        Alert.alert("Giỏ hàng", "Sản phẩm đã có sẵn trong giỏ hàng", [
+          { text: "Hủy", style: "cancel" },
+          {
+            text: "Đến giỏ hàng",
+            onPress: () => {
+              navigation.navigate("CartScreen");
+            },
+          },
+        ]);
+      }
     } catch (error) {
       console.log("Lỗi khi thêm vào giỏ hàng");
     }
+  };
+
+  // Hàm xử lý mua ngay
+  const handleBuyNow = async () => {
+    const userId = await getUserId();
+    if (!userId) {
+      Alert.alert("Lỗi", "Vui lòng đăng nhập để mua hàng.");
+      return;
+    }
+
+    if (!product) {
+      Alert.alert("Lỗi", "Không tìm thấy thông tin sản phẩm.");
+      return;
+    }
+
+    // Tạo đối tượng sản phẩm để truyền đến CheckoutScreen
+    const selectedProduct = {
+      productId: product.productId,
+      title: product.title,
+      price: product.price,
+      quantity: 1, // Mặc định số lượng là 1 khi mua ngay
+      image: product.images && product.images.length > 0 ? product.images[0] : null,
+      sellerId: product.seller?.userId || null,
+      sellerName: product.seller?.fullName || "Người bán",
+      // Thêm id giả để tương thích với logic xóa cart items (nếu cần)
+      id: `buynow_${product.productId}_${Date.now()}`
+    };
+
+    // Điều hướng đến CheckoutScreen với sản phẩm được chọn
+    navigation.navigate("Checkout", {
+      selectedProducts: [selectedProduct],
+      isBuyNow: true // Flag để biết đây là mua ngay
+    });
   };
 
   if (loading) {
@@ -347,6 +394,25 @@ export default function ProductDetail({ route, navigation }) {
   const displayedDescriptionLines = showFullDescription
     ? descriptionLines
     : descriptionLines.slice(0, MAX_DESCRIPTION_LINES);
+
+  const ratings = product.ratings || [];
+  const totalReviews = ratings.length;
+  const averageRating = totalReviews > 0 ? ratings.reduce((acc, curr) => acc + (curr.stars || 0), 0) / totalReviews : 0;
+
+  const renderStars = (starCount) => {
+    const stars = [];
+    for (let i = 1; i <= 5; i++) {
+      stars.push(
+        <Ionicons
+          key={i}
+          name={i <= starCount ? "star" : "star-outline"}
+          size={16}
+          color="#FFC107"
+        />
+      );
+    }
+    return <View style={styles.starRatingContainer}>{stars}</View>;
+  };
 
   return (
     <KeyboardAvoidingView
@@ -446,10 +512,18 @@ export default function ProductDetail({ route, navigation }) {
           {product.seller && (
             <TouchableOpacity style={styles.sellerContainer}>
               <Image
-                source={require("../../assets/images/logo.jpg")}
+                source={{ uri: product.seller.avatarUrl }}
                 style={styles.sellerAvatar}
               />
-              <View style={styles.sellerInfo}>
+              <TouchableOpacity
+                style={styles.sellerInfo}
+                onPress={() =>
+                  navigation.navigate("SellerProfile", {
+                    sellerId: product.seller.userId,
+                    sellerName: product.seller.fullName,
+                  })
+                }
+              >
                 <View style={styles.sellerNameRow}>
                   <Text style={styles.sellerName}>
                     {product.seller.fullName}
@@ -463,24 +537,45 @@ export default function ProductDetail({ route, navigation }) {
                     />
                   )}
                 </View>
-                <View style={styles.sellerRating}>
-                  <Text style={styles.ratingText}>4.0</Text>
-                  {[...Array(5)].map((_, i) => (
-                    <Ionicons
-                      key={i}
-                      name={i < 4 ? "star" : "star-outline"}
-                      size={16}
-                      color="#FFD700"
-                    />
-                  ))}
-                  <Text style={styles.ratingText}>
-                    ({product.seller.productCount || 10} sản phẩm đã bán)
-                  </Text>
-                </View>
-              </View>
+              </TouchableOpacity>
               <Ionicons name="chevron-forward" size={24} color="#ccc" />
             </TouchableOpacity>
           )}
+          {/* Ratings & Reviews Section */}
+          <View style={styles.ratingsSection}>
+            <Text style={styles.sectionTitle}>Đánh giá & Xếp hạng</Text>
+            {totalReviews > 0 ? (
+              <>
+                <View style={styles.ratingSummary}>
+                  <Text style={styles.averageRatingText}>{averageRating.toFixed(1)}</Text>
+                  <View>
+                    {renderStars(averageRating)}
+                    <Text style={styles.totalReviewsText}>({totalReviews} đánh giá)</Text>
+                  </View>
+                </View>
+                <View style={styles.ratingList}>
+                  {ratings.map((rating) => (
+                    <View key={rating.ratingId} style={styles.ratingItem}>
+                      <Image 
+                        source={rating.user?.avatarUrl ? { uri: rating.user.avatarUrl } : require('../../assets/images/icon.png')} 
+                        style={styles.commentAvatar} 
+                      />
+                      <View style={styles.ratingContent}>
+                        <View style={styles.ratingHeader}>
+                           <Text style={styles.commentAuthor}>{rating.user?.fullName || 'Người dùng ẩn danh'}</Text>
+                           {renderStars(rating.stars)}
+                        </View>
+                        <Text style={styles.commentTimestamp}>{new Date(rating.createdAt).toLocaleDateString('vi-VN')}</Text>
+                        <Text style={styles.commentContent}>{rating.comment}</Text>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              </>
+            ) : (
+              <Text style={styles.noCommentsText}>Chưa có đánh giá nào.</Text>
+            )}
+          </View>
           {/* Bình luận */}
           <View style={styles.commentsSection}>
             <Text style={styles.commentsTitle}>Bình luận</Text>
@@ -714,7 +809,7 @@ export default function ProductDetail({ route, navigation }) {
         >
           <Text style={styles.buttonText}>Thêm vào giỏ</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.buyNowButton}>
+        <TouchableOpacity style={styles.buyNowButton} onPress={handleBuyNow}>
           <Text style={styles.buttonText}>Mua ngay</Text>
         </TouchableOpacity>
       </View>
@@ -1121,5 +1216,56 @@ const styles = StyleSheet.create({
     justifyContent: "center", // Căn giữa icon trong nút
     alignItems: "center", // Căn giữa icon trong nút
     height: 45, // Đảm bảo chiều cao tương đương với TextInput
+  },
+  // --- Ratings Section ---
+  ratingsSection: {
+    marginTop: 20,
+    paddingVertical: 15,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 15,
+    color: '#333',
+  },
+  ratingSummary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  averageRatingText: {
+    fontSize: 48,
+    fontWeight: 'bold',
+    color: '#333',
+    marginRight: 15,
+  },
+  starRatingContainer: {
+    flexDirection: 'row',
+  },
+  totalReviewsText: {
+    fontSize: 14,
+    color: '#777',
+    marginTop: 4,
+  },
+  ratingList: {
+    // container for all rating items
+  },
+  ratingItem: {
+    flexDirection: 'row',
+    marginBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f5f5f5',
+    paddingBottom: 15,
+  },
+  ratingContent: {
+    flex: 1,
+  },
+  ratingHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 5,
   },
 });
