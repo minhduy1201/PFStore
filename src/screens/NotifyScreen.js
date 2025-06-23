@@ -17,6 +17,7 @@ import {
   markNotificationAsRead,
 } from "../servers/NotificationService";
 import ProductDetail from "../screens/ProductDetail";
+import OrderDetailsScreen from "../screens/OrderDetailsScreen";
 
 const NotifyScreen = ({ navigation }) => {
   const [notifications, setNotifications] = useState([]);
@@ -98,23 +99,26 @@ const NotifyScreen = ({ navigation }) => {
     }
 
     // Điều hướng dựa trên loại thông báo và OrderId/ProductId
+
     if (item.orderId) {
+      console.log(item.orderId);
+      console.log(currentUserId);
+      console.log(item.userId);
       // Thông báo liên quan đến đơn hàng
       // Kiểm tra loại thông báo để xác định vai trò (người mua/người bán) và điều hướng phù hợp
-      if (item.type === "NewOrder" && item.userId === currentUserId) {
+      if (item.type == "NewOrder" && item.userId == currentUserId) {
+        console.log(item.userId);
         // Đây là thông báo cho người bán về đơn hàng mới
-        navigation.navigate("OrderDetailScreen", {
+        navigation.navigate("OrderDetails", {
           orderId: item.orderId,
-          isSellerView: true,
         });
       } else if (
         (item.type === "OrderAccepted" || item.type === "OrderRejected") &&
         item.userId === currentUserId
       ) {
         // Đây là thông báo cho người mua về trạng thái đơn hàng của họ
-        navigation.navigate("OrderDetailScreen", {
+        navigation.navigate("OrderDetails", {
           orderId: item.orderId,
-          isSellerView: false,
         });
       } else {
         // Trường hợp khác hoặc fallback
