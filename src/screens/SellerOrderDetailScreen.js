@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, Modal, Platform } from 'react-native';
 import { updateOrderStatus } from '../servers/OrderService';
 import { MaterialIcons } from '@expo/vector-icons';
 
@@ -12,18 +12,34 @@ const ORDER_STATUS = {
   'returned': 'Đã hoàn trả',
 };
 
+const STATUS_OPTIONS = [
+  { key: 'pending', label: 'Chờ xác nhận' },
+  { key: 'confirmed', label: 'Đã xác nhận' },
+  { key: 'shipping', label: 'Đang giao hàng' },
+  { key: 'delivered', label: 'Đã giao hàng' },
+  { key: 'cancelled', label: 'Đã hủy' },
+  { key: 'returned', label: 'Đã hoàn trả' },
+];
+
 const SellerOrderDetailScreen = ({ route, navigation }) => {
   const { order } = route.params;
+  const [modalVisible, setModalVisible] = useState(false);
+  const [updating, setUpdating] = useState(false);
+  const [currentStatus, setCurrentStatus] = useState(order.status);
 
-  const handleConfirmOrder = async () => {
+  const handleUpdateStatus = async (newStatus) => {
+    setUpdating(true);
     try {
-      await updateOrderStatus(order.orderId, 'confirmed');
-      Alert.alert('Thành công', 'Đã xác nhận đơn hàng!', [
+      await updateOrderStatus(order.orderId, newStatus);
+      setCurrentStatus(newStatus);
+      setModalVisible(false);
+      Alert.alert('Thành công', 'Cập nhật trạng thái thành công!', [
         { text: 'OK', onPress: () => navigation.goBack() },
       ]);
     } catch (error) {
-      Alert.alert('Lỗi', 'Không thể xác nhận đơn hàng!');
+      Alert.alert('Lỗi', 'Không thể cập nhật trạng thái đơn hàng!');
     }
+    setUpdating(false);
   };
 
   const getStatusColor = (status) => {
@@ -37,6 +53,9 @@ const SellerOrderDetailScreen = ({ route, navigation }) => {
       default: return '#757575';
     }
   };
+
+  // Lọc các trạng thái có thể chuyển đổi (không cho chọn lại trạng thái hiện tại)
+  const availableStatusOptions = STATUS_OPTIONS.filter(opt => opt.key !== currentStatus);
 
   return (
     <ScrollView style={styles.container}>
@@ -65,17 +84,42 @@ const SellerOrderDetailScreen = ({ route, navigation }) => {
 
         <View style={styles.row}>
           <Text style={styles.label}>Trạng thái:</Text>
-          <View style={[styles.statusBadge, { backgroundColor: getStatusColor(order.status) }]}>
-            <Text style={styles.statusText}>{ORDER_STATUS[order.status]}</Text>
+          <View style={[styles.statusBadge, { backgroundColor: getStatusColor(currentStatus) }]}>
+            <Text style={styles.statusText}>{ORDER_STATUS[currentStatus]}</Text>
           </View>
         </View>
       </View>
 
-      {order.status === 'pending' && (
-        <TouchableOpacity style={styles.confirmButton} onPress={handleConfirmOrder}>
-          <Text style={styles.confirmButtonText}>Xác nhận đơn hàng</Text>
-        </TouchableOpacity>
-      )}
+      <TouchableOpacity style={styles.confirmButton} onPress={() => setModalVisible(true)} disabled={updating}>
+        <Text style={styles.confirmButtonText}>{updating ? 'Đang cập nhật...' : 'Cập nhật trạng thái'}</Text>
+      </TouchableOpacity>
+
+      {/* Modal chọn trạng thái mới */}
+      <Modal
+        visible={modalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={{ fontWeight: 'bold', fontSize: 18, marginBottom: 16 }}>Chọn trạng thái mới</Text>
+            {availableStatusOptions.map(opt => (
+              <TouchableOpacity
+                key={opt.key}
+                style={styles.statusOption}
+                onPress={() => handleUpdateStatus(opt.key)}
+                disabled={updating}
+              >
+                <Text style={{ fontSize: 16 }}>{opt.label}</Text>
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.cancelButton}>
+              <Text style={{ color: '#f44336', fontWeight: 'bold' }}>Hủy</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 };
@@ -152,6 +196,31 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 24,
+    width: '80%',
+    alignItems: 'center',
+  },
+  statusOption: {
+    paddingVertical: 12,
+    width: '100%',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  cancelButton: {
+    marginTop: 16,
+    padding: 10,
+    alignItems: 'center',
   },
 });
 
