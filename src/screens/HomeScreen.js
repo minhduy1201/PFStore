@@ -29,7 +29,7 @@ export default function HomeScreen({ navigation }) {
     const checkLoginStatus = async () => {
       try {
         const token = await AsyncStorage.getItem("token");
-        const user = await AsyncStorage.getItem("user");
+        const user = await AsyncStorage.getItem("current_user");
         if (!token || !user) {
           navigation.replace("Login");
         }
@@ -40,7 +40,7 @@ export default function HomeScreen({ navigation }) {
     };
 
     checkLoginStatus();
-  }, [categories, navigation]);
+  }, [navigation]);
 
   useEffect(() => {
     const loadCategories = async () => {
@@ -160,9 +160,9 @@ export default function HomeScreen({ navigation }) {
               }
               activeOpacity={0.85}
             >
-              {prod.productImages && prod.productImages.length > 0 ? (
+              {prod.images && prod.images.length > 0 ? (
                 <Image
-                  source={{ uri: prod.productImages[0].imageUrl }}
+                  source={{ uri: prod.images[0] }}
                   style={styles.productImage}
                   resizeMode="cover"
                 />

@@ -28,7 +28,7 @@ const formatBackendCartItemToFrontend = (backendItem) => {
     backendItem.product.productImages &&
     backendItem.product.productImages.length > 0
       ? backendItem.product.productImages[0].imageUrl
-      : "https://via.placeholder.com/150"; // Fallback URL
+      : "https://via.placeholder.com/150"; 
 
   return {
     id: backendItem.cartId,
@@ -47,7 +47,9 @@ const formatBackendCartItemToFrontend = (backendItem) => {
 
     size: "N/A",
 
-    isSelected: false, //mặc định là sản phẩm chưa được chọn
+    sellerId: backendItem.product ? backendItem.product.sellerId : null,
+
+    isSelected: true, //mặc định là sản phẩm chưa được chọn
   };
 };
 
@@ -222,19 +224,6 @@ const CartScreen = ({ navigation }) => {
           </View>
         </View>
         <View style={{ width: 24 }} />
-      </View>
-      {/* Delivery Address Section */}
-      <View style={styles.addressContainer}>
-        <Text style={styles.addressTitle}>Địa chỉ giao hàng</Text>
-        <View style={styles.addressContent}>
-          <Text
-            style={styles.addressText}
-          >{`${street}, ${ward}, ${district},`}</Text>
-          <Text style={styles.addressText}>{city}</Text>
-        </View>
-        <TouchableOpacity onPress={() => setAddressModalVisible(true)}>
-          <Ionicons name="pencil" size={20} color="#323660" />
-        </TouchableOpacity>
       </View>
 
       <View style={styles.mainContentArea}>
@@ -460,28 +449,33 @@ const styles = StyleSheet.create({
     elevation: 10,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent: "space-between", // Giúp đẩy totalContainer sang trái và checkoutButton sang phải
+    // Bỏ flex: 1 ở đây vì footer là container chính
   },
   totalContainer: {
     flexDirection: "row",
     alignItems: "center",
-    flex: 1,
-    marginRight: 16,
+    flex: 1, // Cái này sẽ giúp totalContainer chiếm hết không gian còn lại bên trái
+    marginRight: 15, // Khoảng cách giữa phần tổng cộng và nút Checkout
   },
   totalTextAmountContainer: {
-    paddingRight: 20,
     flexDirection: "row",
     alignItems: "center",
+    // Bạn có thể không cần paddingRight ở đây nếu muốn gọn hơn
   },
   totalText: { fontSize: 18, fontWeight: "500", marginRight: 8 },
   totalAmount: { fontSize: 20, fontWeight: "bold", color: "#e91e63" },
   checkoutButton: {
     backgroundColor: "#323660",
+    // Loại bỏ flex: 1 ở đây!
     height: 50,
     borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 24,
+    paddingHorizontal: 24, // Giữ padding này để nút có độ rộng tự nhiên theo nội dung
+    width: 150, // **Thêm thuộc tính width cố định để nút không thay đổi kích thước**
+    // Hoặc dùng minWidth nếu bạn muốn nó co giãn một chút nhưng có giới hạn:
+    // minWidth: 120,
   },
   checkoutButtonText: { color: "#fff", fontSize: 18, fontWeight: "bold" },
   emptyCartContainer: {

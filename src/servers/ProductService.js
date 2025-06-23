@@ -83,6 +83,7 @@ export const deletePost = async (postId) => {
 };
 
 
+
 // Thêm hàm updatePost (mock) để chuẩn bị cho màn hình chỉnh sửa
 export const updatePost = async (postId, updatedProductData) => {
   try {
@@ -94,6 +95,16 @@ export const updatePost = async (postId, updatedProductData) => {
   } catch (error) {
     console.error("Lỗi khi cập nhật sản phẩm:", error);
     handleApiError(error, "Cập nhật sản phẩm thất bại.");
+    throw error;
+  }
+};
+
+export const createRating = async (ratingData) => {
+  try {
+    const response = await api.post("/Ratings", ratingData);
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "Gửi đánh giá thất bại. Vui lòng thử lại.");
     throw error;
   }
 };
