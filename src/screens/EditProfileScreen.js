@@ -490,8 +490,9 @@ useEffect(() => {
               }
               style={styles.avatarPlaceholder}
             />
-            <Text style={styles.fullNameText}>{profileData.fullName}</Text>
+            
           </TouchableOpacity>
+          <Text style={styles.fullNameText}>{profileData.fullName}</Text>
         </View>
 
         {/* --- Thông tin tài khoản --- */}
@@ -499,7 +500,6 @@ useEffect(() => {
         <View style={styles.formSection}>
           <View style={styles.row}>
             <View style={styles.inputGroupHalf}>
-              {/* <Text style={styles.inputLabel}>HỌ</Text> */}
               <TextInput
                 style={styles.input}
                 value={ho}
@@ -521,7 +521,6 @@ useEffect(() => {
               />
             </View>
             <View style={styles.inputGroupHalf}>
-              {/* <Text style={styles.inputLabel}>TÊN</Text> */}
               <TextInput
                 style={styles.input}
                 value={ten}
@@ -951,8 +950,6 @@ const styles = StyleSheet.create({
   },
   avatarContainer: {
     alignItems: "center",
-    marginTop: 20,
-    marginBottom: 30,
   },
   avatar: {
     width: 100,
@@ -960,19 +957,7 @@ const styles = StyleSheet.create({
     borderRadius: 50,
     borderWidth: 3,
     borderColor: "#4472C4",
-  },
-  updateAvatarButton: {
-    backgroundColor: "#333",
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: 15,
-    position: "absolute",
-    bottom: -10,
-  },
-  updateAvatarText: {
-    color: "#fff",
-    fontSize: 10,
-    fontWeight: "bold",
+    alignContent: 'center'
   },
   sectionTitle: {
     fontSize: 16,

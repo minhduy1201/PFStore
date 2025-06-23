@@ -71,8 +71,8 @@ export const getOrdersByBuyer = async (buyerId) => {
   }
 };
 
-// Hàm lấy danh sách đơn hàng của người bán
-export const getOrdersBySeller = async (sellerId) => {
+// Lấy danh sách đơn hàng của người bán
+export const getSellerOrders = async (sellerId) => {
   try {
     const response = await api.get(`/Order/seller/${sellerId}`);
     return response.data;
@@ -82,10 +82,10 @@ export const getOrdersBySeller = async (sellerId) => {
   }
 };
 
-// Hàm cập nhật trạng thái đơn hàng
-export const updateOrderStatus = async (orderId, statusData) => {
+// Cập nhật trạng thái đơn hàng
+export const updateOrderStatus = async (orderId, status) => {
   try {
-    const response = await api.put(`/Order/${orderId}`, statusData);
+    const response = await api.put(`/Order/${orderId}/status`, { status });
     return response.data;
   } catch (error) {
     handleApiError(error, "Không thể cập nhật trạng thái đơn hàng. Vui lòng thử lại.");
