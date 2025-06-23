@@ -19,9 +19,9 @@ import { createOrder } from "../servers/OrderService";
 import { deleteMultipleCartItems } from "../servers/CartService";
 import {
   getAvailableVouchers,
-  checkVoucherByCode,
   decreaseVoucherQuantity,
 } from "../servers/VoucherService";
+import { WebView } from 'react-native-webview';
 
 const CheckoutScreen = ({ navigation, route }) => {
   const [products, setProducts] = useState([]);
@@ -81,24 +81,28 @@ const [vouchers, setVouchers] = useState([]);
 const [isVoucherLoading, setVoucherLoading] = useState(false);
 const [isVoucherModalVisible, setVoucherModalVisible] = useState(false);
 
+  const [paypalUrl, setPaypalUrl] = useState(null);
+  const [paypalOrderId, setPaypalOrderId] = useState(null);
+  const [showPaypalWebView, setShowPaypalWebView] = useState(false);
+
 // Khi subtotal thay đổi hoặc khi mở modal, tự động fetch voucher
-useEffect(() => {
-  if (isVoucherModalVisible) {
-    const fetchVouchers = async () => {
-      setVoucherLoading(true);
-      try {
-        const userId = await getUserId();
-        const available = await getAvailableVouchers(userId, subtotal);
-        setVouchers(available || []);
-      } catch (err) {
-        setVouchers([]);
-      } finally {
-        setVoucherLoading(false);
-      }
-    };
-    fetchVouchers();
-  }
-}, [isVoucherModalVisible, subtotal]);
+  useEffect(() => {
+    if (isVoucherModalVisible) {
+      const fetchVouchers = async () => {
+        setVoucherLoading(true);
+        try {
+          const userId = await getUserId();
+          const available = await getAvailableVouchers(userId, subtotal);
+          setVouchers(available || []);
+        } catch (err) {
+          setVouchers([]);
+        } finally {
+          setVoucherLoading(false);
+        }
+      };
+      fetchVouchers();
+    }
+  }, [isVoucherModalVisible, subtotal]);
 
 const openVoucherModal = () => {
   setVoucherModalVisible(true);
@@ -149,7 +153,6 @@ const formatDate = (dateStr) => {
       Alert.alert("Lỗi", "Không có sản phẩm nào để đặt hàng.");
       return;
     }
-
     const buyerId = await getUserId();
     if (!buyerId) {
       Alert.alert(
@@ -159,12 +162,10 @@ const formatDate = (dateStr) => {
       navigation.replace("Login");
       return;
     }
-
     let sellerId = null;
     if (products.length > 0) {
       sellerId = products[0].sellerId;
     }
-
     if (!sellerId) {
       Alert.alert("Lỗi", "Không thể xác định người bán. Vui lòng thử lại.");
       return;
@@ -177,7 +178,6 @@ const formatDate = (dateStr) => {
       Alert.alert("Lỗi", "Dữ liệu sản phẩm không hợp lệ. Vui lòng thử lại.");
       return;
     }
-
     const orderData = {
       buyerId: parseInt(buyerId),
       sellerId: parseInt(sellerId),
@@ -194,6 +194,25 @@ const formatDate = (dateStr) => {
     console.log("Sending order data:", orderData);
     setIsPlacingOrder(true);
     try {
+      if (paymentMethod === 'card') {
+        // Gọi backend tạo order PayPal
+        const response = await fetch('https://b96c-118-71-92-115.ngrok-free.app/api/PayPal/create-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            amount: totalAmount,
+            currency: 'USD',
+            returnUrl: 'https://example.com/paypal-success',
+            cancelUrl: 'https://example.com/paypal-cancel'
+          })
+        });
+        const data = await response.json();
+        setPaypalUrl(data.approvalLink);
+        setPaypalOrderId(data.orderId);
+        setShowPaypalWebView(true);
+        setIsPlacingOrder(false);
+        return;
+      }
       const result = await createOrder(orderData);
       if (result) {
         // Chỉ xóa cart items nếu không phải là mua ngay
@@ -444,7 +463,6 @@ const formatDate = (dateStr) => {
                   Áp dụng đến {formatDate(voucher.endDate)}
                 </Text>
                 <Text style={styles.voucherDescription}>
-                  
                 </Text>
               </View>
               <View style={styles.voucherRight}>
@@ -532,6 +550,94 @@ const formatDate = (dateStr) => {
           </View>
         </View>
       </Modal>
+
+      {showPaypalWebView && paypalUrl && (
+        <Modal visible={showPaypalWebView} animationType="slide">
+          <WebView
+            source={{ uri: paypalUrl }}
+            onNavigationStateChange={async (navState) => {
+              if (navState.url.startsWith('https://example.com/paypal-success')) {
+                setShowPaypalWebView(false);
+                // Gọi backend capture order
+                try {
+                  const response = await fetch('https://b96c-118-71-92-115.ngrok-free.app/api/PayPal/capture-order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ OrderId: paypalOrderId })
+                  });
+                  let text = await response.text();
+                  let data = null;
+                  try {
+                    data = JSON.parse(text);
+                  } catch (err) {
+                    console.error("Phản hồi không hợp lệ từ máy chủ:", text);
+                    Alert.alert("Lỗi", "Phản hồi không hợp lệ từ máy chủ:\n" + text);
+                    return;
+                  }
+                    if (!response.ok) {
+                      Alert.alert('Lỗi xác nhận PayPal', `Mã lỗi: ${response.status}\n${JSON.stringify(data)}`);
+                      return;
+                    }
+                  if (data.status === 'COMPLETED' || (data.result && data.result.status === 'COMPLETED')) {
+                    // Nếu thanh toán thành công, tạo đơn hàng trong hệ thống
+                    try {
+                      const buyerId = await getUserId();
+                      let sellerId = null;
+                      if (products.length > 0) {
+                        sellerId = products[0].sellerId;
+                      }
+                      const orderData = {
+                        buyerId: parseInt(buyerId),
+                        sellerId: parseInt(sellerId),
+                        addressId: selectedDisplayAddress.addressId,
+                        discountAmount: discountAmount,
+                        PromotionId: appliedVoucher ? appliedVoucher.promotionId : null,
+                        paymentMethod: 'card',
+                        orderDetails: products.map((item) => ({
+                          productId: item.productId,
+                          quantity: item.quantity,
+                          snapshotPrice: item.price,
+                        })),
+                      };
+                      const result = await createOrder(orderData);
+                      if (result) {
+                        Alert.alert('Thanh toán thành công!', 'Đơn hàng của bạn đã được thanh toán qua PayPal và lưu vào hệ thống.', [
+                          {
+                            text: 'Xem đơn hàng',
+                            onPress: () => {
+                              navigation.navigate('Main', {
+                                screen: 'Orders',
+                                params: {
+                                  screen: 'OrderDetails',
+                                  params: { orderId: result.orderId },
+                                },
+                              });
+                            },
+                          },
+                          {
+                            text: 'Về trang chủ',
+                            onPress: () => navigation.popToTop(),
+                          },
+                        ]);
+                      }
+                    } catch (e) {
+                      Alert.alert('Thanh toán thành công nhưng lưu đơn hàng thất bại!', e.message);
+                    }
+                  } else {
+                    Alert.alert('Thanh toán thất bại!', `Có lỗi xảy ra khi xác nhận thanh toán.\nChi tiết: ${JSON.stringify(data)}`);
+                  }
+                } catch (e) {
+                  Alert.alert('Lỗi', `Không thể xác nhận thanh toán với PayPal.\n${e.message}`);
+                }
+              }
+              if (navState.url.startsWith('https://example.com/paypal-cancel')) {
+                setShowPaypalWebView(false);
+                Alert.alert('Bạn đã hủy thanh toán PayPal.');
+              }
+            }}
+          />
+        </Modal>
+      )}
     </SafeAreaView>
   );
 };
