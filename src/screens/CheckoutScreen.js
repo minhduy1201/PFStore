@@ -182,7 +182,7 @@ const formatDate = (dateStr) => {
       buyerId: parseInt(buyerId),
       sellerId: parseInt(sellerId),
       addressId: selectedDisplayAddress.addressId,
-     PromotionId: appliedVoucher ? appliedVoucher.promotionId : null,
+      PromotionId: appliedVoucher ? appliedVoucher.promotionId : null,
       discountAmount: discountAmount,
       paymentMethod: paymentMethod,
       orderDetails: products.map((item) => ({
@@ -191,7 +191,6 @@ const formatDate = (dateStr) => {
         snapshotPrice: item.price,
       })),
     };
-
     console.log("Sending order data:", orderData);
     setIsPlacingOrder(true);
     try {

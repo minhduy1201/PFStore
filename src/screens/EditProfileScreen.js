@@ -521,7 +521,6 @@ useEffect(() => {
               />
             </View>
             <View style={styles.inputGroupHalf}>
-              {/* <Text style={styles.inputLabel}>TÊN</Text> */}
               <TextInput
                 style={styles.input}
                 value={ten}
