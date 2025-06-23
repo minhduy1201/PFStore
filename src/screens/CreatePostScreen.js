@@ -219,13 +219,13 @@ const CreatePostScreen = ({ navigation, route }) => {
   };
 
   const handleSubmit = async () => {
-    if (!title || !price || !selectedCategoryId || images.length === 0) {
-      Alert.alert(
-        "Thiếu thông tin",
-        "Vui lòng điền đầy đủ tiêu đề, giá, chọn danh mục và ít nhất một ảnh."
-      );
-      return;
-    }
+    // if (!title || !price || !selectedCategoryId || images.length == 0) {
+    //   Alert.alert(
+    //     "Thiếu thông tin",
+    //     "Vui lòng điền đầy đủ tiêu đề, giá, chọn danh mục và ít nhất một ảnh."
+    //   );
+    //   return;
+    // }
 
     if (isSubmitting) return;
 
@@ -285,6 +285,7 @@ const CreatePostScreen = ({ navigation, route }) => {
           location: selectedAddress?.addressLine ?? "",
           productAttributes: attributeList,
         };
+        
 
         const response = await updatePost(productId, payload);
         Alert.alert("Thành công", response.message);

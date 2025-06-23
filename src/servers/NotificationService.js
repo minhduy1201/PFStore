@@ -44,3 +44,17 @@ export const deleteNotification = async (notificationId) => {
     throw error;
   }
 };
+
+// Hàm đánh dấu thông báo là đã đọc
+export const markNotificationAsRead = async (notificationId) => {
+  try {
+    const res = await api.put(`/Notifications/MarkAsRead/${notificationId}`);
+    return res.data; // Trả về kết quả từ API
+  } catch (error) {
+    console.error(
+      `Lỗi khi đánh dấu thông báo #${notificationId} là đã đọc:`,
+      error.response?.data || error.message
+    );
+    throw error;
+  }
+};
