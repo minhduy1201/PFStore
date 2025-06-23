@@ -43,6 +43,8 @@ import SearchProductsScreen from "./src/screens/SearchProductsScreen";
 import CreatePostScreen from "./src/screens/CreatePostScreen";
 import SellerProfileScreen from "./src/screens/SellerProfileScreen";
 import NotifyScreen from "./src/screens/NotifyScreen";
+import SellerOrdersScreen from "./src/screens/SellerOrdersScreen";
+import SellerOrderDetailScreen from "./src/screens/SellerOrderDetailScreen";
 
 // import SettingsScreen from './src/screens/Settings/SettingsScreen';
 
@@ -206,6 +208,8 @@ export default function App() {
         <Stack.Screen name="EditProfile" component={EditProfileScreen} />
         <Stack.Screen name="SearchProducts" component={SearchProductsScreen} />
         <Stack.Screen name="RateProducts" component={RateProductsScreen} />
+        <Stack.Screen name="SellerOrders" component={SellerOrdersScreen} />
+        <Stack.Screen name="SellerOrderDetail" component={SellerOrderDetailScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

@@ -171,7 +171,7 @@ const CheckoutScreen = ({ navigation, route }) => {
     try {
       if (paymentMethod === 'card') {
         // Gọi backend tạo order PayPal
-        const response = await fetch('https://b96c-118-71-92-115.ngrok-free.app/api/PayPal/create-order', {
+        const response = await fetch('https://1093-118-71-92-115.ngrok-free.app/api/PayPal/create-order', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -494,7 +494,7 @@ const CheckoutScreen = ({ navigation, route }) => {
                 setShowPaypalWebView(false);
                 // Gọi backend capture order
                 try {
-                  const response = await fetch('https://b96c-118-71-92-115.ngrok-free.app/api/PayPal/capture-order', {
+                  const response = await fetch('https://1093-118-71-92-115.ngrok-free.app/api/PayPal/capture-order', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ OrderId: paypalOrderId })

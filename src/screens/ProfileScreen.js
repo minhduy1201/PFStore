@@ -69,6 +69,15 @@ const ProfileScreen = ({ navigation }) => {
 
         <TouchableOpacity
           style={styles.menuItem}
+          onPress={() => handlePress("SellerOrders")}
+        >
+          <Text style={styles.menuItemText}>Quản lý bán hàng</Text>
+          <MaterialIcons name="keyboard-arrow-right" size={24} color="#555" />
+        </TouchableOpacity>
+        <View style={styles.separator} />
+
+        <TouchableOpacity
+          style={styles.menuItem}
           onPress={() => handlePress("AppInfo")}
         >
           <Text style={styles.menuItemText}>Thông tin ứng dụng</Text>
