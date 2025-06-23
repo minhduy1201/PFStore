@@ -219,13 +219,13 @@ const CreatePostScreen = ({ navigation, route }) => {
   };
 
   const handleSubmit = async () => {
-    if (!title || !price || !selectedCategoryId || images.length === 0) {
-      Alert.alert(
-        "Thiếu thông tin",
-        "Vui lòng điền đầy đủ tiêu đề, giá, chọn danh mục và ít nhất một ảnh."
-      );
-      return;
-    }
+    // if (!title || !price || !selectedCategoryId || images.length == 0) {
+    //   Alert.alert(
+    //     "Thiếu thông tin",
+    //     "Vui lòng điền đầy đủ tiêu đề, giá, chọn danh mục và ít nhất một ảnh."
+    //   );
+    //   return;
+    // }
 
     if (isSubmitting) return;
 
@@ -285,6 +285,7 @@ const CreatePostScreen = ({ navigation, route }) => {
           location: selectedAddress?.addressLine ?? "",
           productAttributes: attributeList,
         };
+        
 
         const response = await updatePost(productId, payload);
         Alert.alert("Thành công", response.message);
@@ -318,13 +319,11 @@ const CreatePostScreen = ({ navigation, route }) => {
   };
 
   // Không có phần loading overlay nữa
-
   return (
     <ScrollView style={styles.container}>
       <Text style={styles.header}>
         {productId ? "Chỉnh sửa sản phẩm" : "Đăng sản phẩm mới"}
       </Text>
-
       <Text style={styles.label}>Ảnh sản phẩm (tối đa 5 ảnh)</Text>
       <View style={styles.imageRow}>
         {images.map((uri, idx) => (
@@ -445,7 +444,7 @@ const CreatePostScreen = ({ navigation, route }) => {
         placeholder="Nhập giá sale nếu có (ví dụ: 80000)"
       />
 
-      <View style={styles.switchRow}>
+      {/* <View style={styles.switchRow}>
         <Text style={styles.label}>Có thể thương lượng</Text>
         <Switch
           onValueChange={setIsNegotiable}
@@ -453,7 +452,7 @@ const CreatePostScreen = ({ navigation, route }) => {
           trackColor={{ false: "#767577", true: "#81b0ff" }}
           thumbColor={isNegotiable ? "#f5dd4b" : "#f4f3f4"}
         />
-      </View>
+      </View> */}
 
       <Text style={styles.label}>Thương hiệu</Text>
       <DropDownPicker

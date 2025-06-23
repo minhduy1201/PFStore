@@ -14,7 +14,9 @@ import { getUserId } from "../servers/AuthenticationService";
 import {
   deleteNotification,
   getNotifyByUserId,
+  markNotificationAsRead,
 } from "../servers/NotificationService";
+import ProductDetail from "../screens/ProductDetail";
 
 const NotifyScreen = ({ navigation }) => {
   const [notifications, setNotifications] = useState([]);
@@ -78,20 +80,22 @@ const NotifyScreen = ({ navigation }) => {
 
   // Hàm xử lý khi nhấn vào thông báo
   const handleNotificationPress = async (item) => {
-    // TODO: Gọi API markNotificationAsRead (khi bạn triển khai ở backend)
-    // để đánh dấu thông báo là đã đọc
-    // if (!item.isRead) {
-    //     try {
-    //         await markNotificationAsRead(item.notificationId);
-    //         setNotifications(prevNotifications =>
-    //             prevNotifications.map(notif =>
-    //                 notif.notificationId === item.notificationId ? { ...notif, isRead: true } : notif
-    //             )
-    //         );
-    //     } catch (error) {
-    //         console.error("Lỗi khi đánh dấu đã đọc:", error);
-    //     }
-    // }
+    // Kiểm tra xem thông báo đã được đọc hay chưa
+    if (!item.isRead) {
+      try {
+        // Gọi API để đánh dấu thông báo đã đọc
+        await markNotificationAsRead(item.notificationId);
+
+        // Cập nhật thông báo đã được đánh dấu là đã đọc trong state
+        setNotifications((prevNotifications) =>
+          prevNotifications.map((notif) =>
+            notif.notificationId === item.notificationId ? { ...notif, isRead: true } : notif
+          )
+        );
+      } catch (error) {
+        console.error("Lỗi khi đánh dấu thông báo đã đọc:", error);
+      }
+    }
 
     // Điều hướng dựa trên loại thông báo và OrderId/ProductId
     if (item.orderId) {
@@ -118,7 +122,7 @@ const NotifyScreen = ({ navigation }) => {
       }
     } else if (item.productId) {
       // Thông báo liên quan đến sản phẩm (ví dụ: sản phẩm hết hàng, sản phẩm mới)
-      navigation.navigate("ProductDetailScreen", { productId: item.productId });
+      navigation.navigate("ProductDetail", { productId: item.productId });
     } else {
       // Thông báo chung chung không liên quan đến OrderId/ProductId cụ thể
       Alert.alert("Thông báo", item.message);
