@@ -34,6 +34,7 @@ const ManageOrdersScreen = ({ navigation }) => {
           setLoading(true);
           const userId = await AsyncStorage.getItem('userId');
           if (userId) {
+            console.log("Fetching orders for userId:", userId);
             const fetchedOrders = await getOrdersByBuyer(userId);
             if (fetchedOrders) {
               const userIdInt = parseInt(userId);
