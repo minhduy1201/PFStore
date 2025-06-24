@@ -55,7 +55,10 @@ export const getOrderById = async (orderId) => {
     const response = await api.get(`/Order/${orderId}`);
     return response.data;
   } catch (error) {
-    handleApiError(error, "Không thể lấy thông tin đơn hàng. Vui lòng thử lại.");
+    handleApiError(
+      error,
+      "Không thể lấy thông tin đơn hàng. Vui lòng thử lại."
+    );
     return null;
   }
 };
@@ -66,7 +69,10 @@ export const getOrdersByBuyer = async (buyerId) => {
     const response = await api.get(`/Order/buyer/${buyerId}`);
     return response.data;
   } catch (error) {
-    handleApiError(error, "Không thể lấy danh sách đơn hàng. Vui lòng thử lại.");
+    handleApiError(
+      error,
+      "Không thể lấy danh sách đơn hàng. Vui lòng thử lại."
+    );
     return null;
   }
 };
@@ -77,7 +83,10 @@ export const getSellerOrders = async (sellerId) => {
     const response = await api.get(`/Order/seller/${sellerId}`);
     return response.data;
   } catch (error) {
-    handleApiError(error, "Không thể lấy danh sách đơn hàng. Vui lòng thử lại.");
+    handleApiError(
+      error,
+      "Không thể lấy danh sách đơn hàng. Vui lòng thử lại."
+    );
     return null;
   }
 };
@@ -88,7 +97,10 @@ export const updateOrderStatus = async (orderId, status) => {
     const response = await api.put(`/Order/${orderId}/status`, { status });
     return response.data;
   } catch (error) {
-    handleApiError(error, "Không thể cập nhật trạng thái đơn hàng. Vui lòng thử lại.");
+    handleApiError(
+      error,
+      "Không thể cập nhật trạng thái đơn hàng. Vui lòng thử lại."
+    );
     return null;
   }
 };
@@ -102,12 +114,12 @@ export const cancelOrder = async (orderId) => {
     handleApiError(error, "Không thể hủy đơn hàng. Vui lòng thử lại.");
     return null;
   }
-}; 
+};
 
 // lấy lịch sử giao dịch của người dùng
 export const getTransactionHistoryByUser = async (userId) => {
   try {
-    const response = await api.get(`/orders/history/${userId}`); 
+    const response = await api.get(`/orders/history/${userId}`);
     return response.data;
   } catch (error) {
     console.error("Lỗi khi lấy lịch sử giao dịch:", error);
@@ -115,3 +127,27 @@ export const getTransactionHistoryByUser = async (userId) => {
   }
 };
 
+// Gửi yêu cầu trả hàng
+export const requestReturn = async (orderId) => {
+  try {
+    const result = await fetch("/api/Orders/RequestReturn", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`, // Gửi token nếu cần
+      },
+      body: JSON.stringify({ orderId: orderId }),
+    });
+
+    if (result.status === 200) {
+      // Trả về phản hồi thành côngr
+      return response.data;
+    } else {
+      // Xử lý lỗi nếu không thành công
+      throw new Error("Yêu cầu trả hàng không thành công");
+    }
+  } catch (error) {
+    handleApiError(error); // Xử lý lỗi từ API
+    throw new Error("Lỗi khi gửi yêu cầu trả hàng.");
+  }
+};
