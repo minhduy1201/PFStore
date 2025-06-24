@@ -19,12 +19,13 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { getTransactionHistoryByUser } from "../servers/OrderService";
 import { getUserId } from "../servers/AuthenticationService";
-import { getOrdersByBuyer } from "../servers/OrderService";
-import { submitRating } from "../servers/RatingService"; 
+import { getOrdersByBuyer, requestReturn } from "../servers/OrderService";
+import { submitRating } from "../servers/RatingService";
 
 const TransactionHistoryScreen = ({ navigation }) => {
   const [transactions, setTransactions] = useState([]);
   const [currentUserId, setCurrentUserId] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const fetchCurrentUserId = async () => {
@@ -40,7 +41,8 @@ const TransactionHistoryScreen = ({ navigation }) => {
       console.log("Lịch sử giao dịch:", data);
       // Lọc chỉ những đơn hàng có status === "completed"
       const completedTransactions = data.filter(
-        (item) => item.status === "completed"
+        (item) =>
+          item.status === "completed" || item.status === "return_requested"
       );
 
       // Set dữ liệu vào state nếu có đơn hàng đã hoàn thành
@@ -89,7 +91,8 @@ const TransactionHistoryScreen = ({ navigation }) => {
       // Cập nhật lại lịch sử giao dịch sau khi đánh giá
       const data = await getOrdersByBuyer(currentUserId);
       const completedTransactions = data.filter(
-        (item) => item.status === "completed"
+        (item) =>
+          item.status === "completed" || item.status === "return_requested"
       );
 
       // Set dữ liệu vào state nếu có đơn hàng đã hoàn thành
@@ -126,6 +129,31 @@ const TransactionHistoryScreen = ({ navigation }) => {
         {stars}
       </View>
     );
+  };
+
+  // Xử lý yêu cầu trả hàng
+  const handleReturnRequest = async (orderId) => {
+    console.log("Yêu cầu trả hàng cho đơn hàng:", orderId); // Log orderId để kiểm tra
+    try {
+      setLoading(true); // Hiển thị trạng thái đang tải
+      const result = await requestReturn(orderId); // Gửi yêu cầu trả hàng
+      Alert.alert("Thông báo", result.message); // Hiển thị thông báo thành công
+      console.log("Kết quả yêu cầu trả hàng thành công:", result); // Log kết quả thành công
+      // Cập nhật trạng thái đơn hàng sau khi yêu cầu trả hàng thành công
+      setTransactions((prevTransactions) =>
+        prevTransactions.map((order) => {
+          if (order.orderId === orderId) {
+            order.status = "return_requested"; // Cập nhật trạng thái đơn hàng
+          }
+          return order;
+        })
+      );
+    } catch (error) {
+      console.error("Lỗi khi yêu cầu trả hàng:", error); // Log chi tiết lỗi
+      Alert.alert("Lỗi", "Có lỗi khi gửi yêu cầu trả hàng."); // Hiển thị thông báo lỗi
+    } finally {
+      setLoading(false); // Ẩn trạng thái đang tải
+    }
   };
 
   const renderTransactionItem = ({ item }) => {
@@ -233,12 +261,26 @@ const TransactionHistoryScreen = ({ navigation }) => {
               </Text>
               <Text style={styles.orderId}>{item.orderId}</Text>
               <Text style={styles.dateText}>{item.createdAt}</Text>
+              {item.status === "return_requested" && (
+                <Text style={styles.returnStatus}>Đã yêu cầu trả hàng</Text>
+              )}
+
               <TouchableOpacity
                 style={styles.reviewButton}
                 onPress={() => openReviewModal(item)}
               >
                 <Text style={styles.reviewButtonText}>Đánh giá</Text>
               </TouchableOpacity>
+
+              
+              {item.status !== "return_requested" && (
+                <TouchableOpacity
+                  style={styles.returnButton}
+                  onPress={() => handleReturnRequest(item.orderId)}
+                >
+                  <Text style={styles.returnButtonText}>Yêu cầu trả hàng</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
         )}
@@ -521,6 +563,17 @@ const completeModalStyles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     marginTop: 2,
+  },
+
+  returnButton: {
+    backgroundColor: "#FF6347", // Màu đỏ để chỉ ra hành động quan trọng
+    padding: 10,
+    borderRadius: 5,
+    marginTop: 10,
+  },
+  returnButtonText: {
+    color: "#fff",
+    textAlign: "center",
   },
 });
 
