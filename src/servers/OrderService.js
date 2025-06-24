@@ -104,3 +104,14 @@ export const cancelOrder = async (orderId) => {
   }
 }; 
 
+// lấy lịch sử giao dịch của người dùng
+export const getTransactionHistoryByUser = async (userId) => {
+  try {
+    const response = await api.get(`/orders/history/${userId}`); 
+    return response.data;
+  } catch (error) {
+    console.error("Lỗi khi lấy lịch sử giao dịch:", error);
+    throw error;
+  }
+};
+
